@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "compile": "npm run compile --workspace blockchain",
+    "generate-types": "npm run compile --workspace blockchain && npm run wagmi:generate --workspace frontend",
+    "test": "npm run test --workspace blockchain"
+  },
+  "workspaces": [
+    "blockchain",
+    "frontend"
+  ]
+}
