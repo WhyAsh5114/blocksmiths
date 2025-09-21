@@ -1,6 +1,7 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { projectCoinFactoryAbi, projectCoinAbi } from '@/lib/wagmi-generated';
 import { parseEther, formatEther } from 'viem';
+import { useEffect } from 'react';
 
 // Factory contract address (update this after deployment)
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS;
@@ -83,42 +84,79 @@ export function useProjectCoinFactory() {
   };
 }
 
-export function useProjectCoinContract(tokenAddress: string) {
-  const { data: totalSupply } = useReadContract({
+export function useProjectCoinContract(tokenAddress: string, mintAmount?: string) {
+  // Skip contract calls if no token address is provided
+  const isValidAddress = Boolean(tokenAddress && tokenAddress !== '');
+  const validMintAmount = Boolean(mintAmount && parseFloat(mintAmount) > 0);
+  
+  const { data: totalSupply, refetch: refetchTotalSupply } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: projectCoinAbi, // Use the individual token ABI
     functionName: 'totalSupply',
+    query: { enabled: isValidAddress }
   });
 
-  const { data: name } = useReadContract({
+  const { data: name, refetch: refetchName } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: projectCoinAbi,
     functionName: 'name',
+    query: { enabled: isValidAddress }
   });
 
-  const { data: symbol } = useReadContract({
+  const { data: symbol, refetch: refetchSymbol } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: projectCoinAbi,
     functionName: 'symbol',
+    query: { enabled: isValidAddress }
   });
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  // Calculate mint cost for the provided amount
+  const { data: mintCost, refetch: refetchMintCost } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: projectCoinAbi,
+    functionName: 'calculateMintCost',
+    args: [parseEther(mintAmount || '0')],
+    query: { enabled: isValidAddress && validMintAmount }
+  });
+
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
-  // Calculate mint cost for a given amount
-  const { data: mintCost } = useReadContract({
-    address: tokenAddress as `0x${string}`,
-    abi: projectCoinAbi,
-    functionName: 'calculateMintCost',
-    args: [parseEther('1')], // Default to 1 token
-  });
+  // Refetch data when transaction is successful
+  useEffect(() => {
+    if (isSuccess) {
+      refetchTotalSupply();
+      refetchName();
+      refetchSymbol();
+      refetchMintCost();
+    }
+  }, [isSuccess, refetchTotalSupply, refetchName, refetchSymbol, refetchMintCost]);
+
+  // Function to manually refresh all data
+  const refreshData = () => {
+    refetchTotalSupply();
+    refetchName();
+    refetchSymbol();
+    refetchMintCost();
+  };
 
   // Mint tokens
   const mintTokens = async (amount: string) => {
-    if (!mintCost) return;
+    if (!isValidAddress) {
+      throw new Error('No token address provided');
+    }
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+
+    // Use the current mint cost if available, otherwise we need to fetch it
+    if (!mintCost) {
+      throw new Error('Unable to calculate mint cost');
+    }
     
     writeContract({
       address: tokenAddress as `0x${string}`,
@@ -143,8 +181,12 @@ export function useProjectCoinContract(tokenAddress: string) {
     
     // Functions
     mintTokens,
+    refreshData,
     
     // Transaction hash
     hash,
+    
+    // Error handling
+    writeError: writeError?.message,
   };
 }
