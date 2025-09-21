@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import getConfig from "next/config";
+import { WalletConnect } from "@/components/wallet-connect";
+import { getConfig } from "@/wagmi";
 import { headers } from "next/headers";
 import { ReactNode } from "react";
 import { Toaster } from "sonner";
@@ -18,8 +19,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <SidebarProvider>
         <AppSidebar />
         <div className="w-full flex flex-col">
-          <header className="h-12 flex items-center px-4">
+          <header className="h-12 flex items-center justify-between px-4 border-b border-border/40">
             <SidebarTrigger />
+            <WalletConnect />
           </header>
           <main className="p-4 space-y-4">{children}</main>
         </div>
