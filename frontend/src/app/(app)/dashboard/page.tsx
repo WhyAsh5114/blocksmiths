@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardHeader } from './components/dashboard-header';
 import { SearchBar } from './components/search-bar';
 import { IntegratedMarketCard } from './components/integrated-market-card';
@@ -48,12 +48,22 @@ export default function DashboardPage() {
 
   const displayMarkets = searchQuery.trim() ? searchResults : markets;
 
-  const hotMarkets = displayMarkets.filter(m => m.change > 25);
-  const trendingMarkets = displayMarkets.filter(m => m.volume > 8000);
-  const newMarkets = displayMarkets.slice(-6);
-  const endingSoonMarkets = displayMarkets.filter(m => 
-    m.timeLeft.includes('1d') || m.timeLeft.includes('2d')
-  );
+  // Memoize filtered markets to prevent unnecessary re-renders
+  const filteredMarkets = useMemo(() => {
+    const hotMarkets = displayMarkets.filter(m => m.change > 25);
+    const trendingMarkets = displayMarkets.filter(m => m.volume > 8000);
+    const newMarkets = displayMarkets.slice(-6);
+    const endingSoonMarkets = displayMarkets.filter(m => 
+      m.timeLeft.includes('1d') || m.timeLeft.includes('2d')
+    );
+
+    return {
+      hot: hotMarkets,
+      trending: trendingMarkets,
+      new: newMarkets,
+      ending: endingSoonMarkets,
+    };
+  }, [displayMarkets]);
 
   const handleCreateToken = (repository: string, name: string, symbol: string) => {
     createMarketToken(repository, name, symbol);
@@ -63,9 +73,26 @@ export default function DashboardPage() {
     return (
       <div className="space-y-8">
         <DashboardHeader />
-        <Card className="game-card">
-          <CardContent className="p-6 text-center">
-            <p className="text-red-400">Error loading markets: {error}</p>
+        <Card className="game-card border-red-400/50">
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <h3 className="text-lg font-semibold text-red-400">Error Loading Markets</h3>
+              <p className="text-red-300">{error}</p>
+              {error.includes('rate limit') && (
+                <div className="mt-4 p-4 bg-yellow-400/10 border border-yellow-400/20 rounded-lg text-left">
+                  <h4 className="font-semibold text-yellow-400 mb-2">How to fix this:</h4>
+                  <ol className="text-sm text-yellow-300 space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">GitHub Settings → Personal Access Tokens</a></li>
+                    <li>Click "Generate new token (classic)"</li>
+                    <li>Select the "public_repo" scope</li>
+                    <li>Copy the generated token</li>
+                    <li>Create a <code className="bg-black/20 px-1 rounded">.env.local</code> file in the frontend folder</li>
+                    <li>Add: <code className="bg-black/20 px-1 rounded">NEXT_PUBLIC_GITHUB_TOKEN=your_token_here</code></li>
+                    <li>Restart the development server</li>
+                  </ol>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -165,7 +192,7 @@ export default function DashboardPage() {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {trendingMarkets.slice(0, 9).map((market) => (
+                  {filteredMarkets.trending.slice(0, 9).map((market) => (
                     <IntegratedMarketCard
                       key={`${market.repo}-${market.prNumber}`}
                       market={market}
@@ -178,7 +205,7 @@ export default function DashboardPage() {
 
             <TabsContent value="hot" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {hotMarkets.slice(0, 9).map((market) => (
+                {filteredMarkets.hot.slice(0, 9).map((market) => (
                   <IntegratedMarketCard
                     key={`${market.repo}-${market.prNumber}`}
                     market={market}
@@ -190,7 +217,7 @@ export default function DashboardPage() {
 
             <TabsContent value="new" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {newMarkets.map((market) => (
+                {filteredMarkets.new.map((market) => (
                   <IntegratedMarketCard
                     key={`${market.repo}-${market.prNumber}`}
                     market={market}
@@ -202,7 +229,7 @@ export default function DashboardPage() {
 
             <TabsContent value="ending" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {endingSoonMarkets.slice(0, 9).map((market) => (
+                {filteredMarkets.ending.slice(0, 9).map((market) => (
                   <IntegratedMarketCard
                     key={`${market.repo}-${market.prNumber}`}
                     market={market}

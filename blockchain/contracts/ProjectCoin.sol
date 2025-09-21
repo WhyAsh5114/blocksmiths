@@ -88,25 +88,46 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         
         // Mint tokens to user
         _mint(msg.sender, _tokenAmount);
-        totalMinted += _tokenAmount;
-        userMintedAmount[msg.sender] += _tokenAmount;
+        _updateMintingState(_tokenAmount);
         
         // Update price based on bonding curve
-        uint256 mintBatches = _tokenAmount / tokensPerMint;
-        if (mintBatches > 0) {
-            mintPrice += mintPriceIncrement * mintBatches;
-            emit PriceUpdated(mintPrice);
-        }
+        _updateMintPrice(_tokenAmount);
         
         // Distribute fees
         _distributeFees(msg.value);
         
         // Refund excess ETH
-        if (msg.value > requiredEth) {
-            payable(msg.sender).transfer(msg.value - requiredEth);
-        }
+        _refundExcess(msg.value, requiredEth);
         
         emit TokensMinted(msg.sender, _tokenAmount, mintPrice, requiredEth);
+    }
+    
+    /**
+     * @dev Internal function to update minting state
+     */
+    function _updateMintingState(uint256 _tokenAmount) internal {
+        totalMinted += _tokenAmount;
+        userMintedAmount[msg.sender] += _tokenAmount;
+    }
+    
+    /**
+     * @dev Internal function to update mint price
+     */
+    function _updateMintPrice(uint256 _tokenAmount) internal {
+        uint256 mintBatches = _tokenAmount / tokensPerMint;
+        if (mintBatches > 0) {
+            mintPrice += mintPriceIncrement * mintBatches;
+            emit PriceUpdated(mintPrice);
+        }
+    }
+    
+    /**
+     * @dev Internal function to refund excess ETH
+     */
+    function _refundExcess(uint256 paidAmount, uint256 requiredAmount) internal {
+        if (paidAmount > requiredAmount) {
+            payable(msg.sender).transfer(paidAmount - requiredAmount);
+        }
     }
     
     /**
@@ -153,19 +174,28 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         uint256 rewardPoolAmount = (_totalFees * REWARD_POOL_FEE) / 100;
         uint256 buybackAmount = _totalFees - treasuryAmount - rewardPoolAmount;
         
-        // Transfer to treasury
-        if (treasuryAmount > 0) {
-            payable(treasury).transfer(treasuryAmount);
-        }
-        
-        // Transfer to reward pool
-        if (rewardPoolAmount > 0) {
-            payable(rewardPool).transfer(rewardPoolAmount);
-        }
-        
-        // Keep buyback amount in contract for future buybacks
+        _transferToTreasury(treasuryAmount);
+        _transferToRewardPool(rewardPoolAmount);
         
         emit FeesDistributed(treasuryAmount, rewardPoolAmount, buybackAmount);
+    }
+    
+    /**
+     * @dev Internal function to transfer fees to treasury
+     */
+    function _transferToTreasury(uint256 amount) internal {
+        if (amount > 0) {
+            payable(treasury).transfer(amount);
+        }
+    }
+    
+    /**
+     * @dev Internal function to transfer fees to reward pool
+     */
+    function _transferToRewardPool(uint256 amount) internal {
+        if (amount > 0) {
+            payable(rewardPool).transfer(amount);
+        }
     }
     
     /**

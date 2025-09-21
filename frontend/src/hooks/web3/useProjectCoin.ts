@@ -2,8 +2,8 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { projectCoinFactoryAbi, projectCoinAbi } from '@/lib/wagmi-generated';
 import { parseEther, formatEther } from 'viem';
 
-// Factory contract address (will need to be deployed)
-const FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000'; // TODO: Replace with deployed address
+// Factory contract address (update this after deployment)
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS;
 
 export interface ProjectInfo {
   tokenAddress: string;
@@ -17,9 +17,9 @@ export interface ProjectInfo {
 }
 
 export function useProjectCoinFactory() {
-  // Read functions
-  const { data: allProjectsData, isLoading: isLoadingProjects } = useReadContract({
-    address: FACTORY_ADDRESS,
+  // Read functions - only if we have a valid factory address
+  const { data: allProjectsData, isLoading: isLoadingProjects, error: contractError } = useReadContract({
+    address: FACTORY_ADDRESS as `0x${string}`,
     abi: projectCoinFactoryAbi,
     functionName: 'getAllProjects',
     args: [BigInt(0), BigInt(100)], // offset: 0, limit: 100
@@ -28,7 +28,7 @@ export function useProjectCoinFactory() {
   // Extract projects array from the returned tuple
   const allProjects = allProjectsData ? (allProjectsData as readonly [ProjectInfo[], bigint])[0] : [];
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -45,7 +45,7 @@ export function useProjectCoinFactory() {
     const [owner, repo] = repository.split('/');
     
     writeContract({
-      address: FACTORY_ADDRESS,
+      address: FACTORY_ADDRESS as `0x${string}`,
       abi: projectCoinFactoryAbi,
       functionName: 'createProjectCoin',
       args: [name, symbol, owner, repo, treasury as `0x${string}`, rewardPool as `0x${string}`],
@@ -76,6 +76,10 @@ export function useProjectCoinFactory() {
     
     // Transaction hash
     hash,
+    
+    // Error handling
+    contractError: contractError?.message,
+    writeError: writeError?.message,
   };
 }
 

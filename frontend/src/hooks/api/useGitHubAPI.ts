@@ -54,9 +54,13 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get token from environment if not provided
+  const token = options.token || process.env.NEXT_PUBLIC_GITHUB_TOKEN;
+  
   const baseHeaders = {
-    'Accept': 'application/vnd.github.v3+json',
-    ...(options.token && { 'Authorization': `token ${options.token}` }),
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
   };
 
   // Fetch repository details
@@ -71,7 +75,13 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
       );
       
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+        if (response.status === 403) {
+          throw new Error('GitHub API rate limit exceeded. Please add a GitHub token to your .env.local file.');
+        } else if (response.status === 404) {
+          throw new Error(`Repository ${owner}/${repo} not found.`);
+        } else {
+          throw new Error(`GitHub API error: ${response.status} - ${response.statusText}`);
+        }
       }
       
       const data = await response.json();
@@ -101,7 +111,13 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
       );
       
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+        if (response.status === 403) {
+          throw new Error('GitHub API rate limit exceeded. Please add a GitHub token to your .env.local file.');
+        } else if (response.status === 404) {
+          throw new Error(`Repository ${owner}/${repo} not found.`);
+        } else {
+          throw new Error(`GitHub API error: ${response.status} - ${response.statusText}`);
+        }
       }
       
       const data = await response.json();
@@ -130,7 +146,13 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
       );
       
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+        if (response.status === 403) {
+          throw new Error('GitHub API rate limit exceeded. Please add a GitHub token to your .env.local file.');
+        } else if (response.status === 422) {
+          throw new Error('Invalid search query. Please try a different search term.');
+        } else {
+          throw new Error(`GitHub API error: ${response.status} - ${response.statusText}`);
+        }
       }
       
       const data = await response.json();
@@ -169,43 +191,89 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
 
 // Convert GitHub PR data to our Market interface
 export function convertPRToMarket(pr: GitHubPR, repoName: string): Market {
-  // Calculate probability based on PR characteristics
-  let probability = 50; // Base probability
+  // Create a deterministic seed based on PR ID to ensure consistent values
+  const seed = pr.id;
+  const seedRandom = (multiplier: number) => {
+    const x = Math.sin(seed * multiplier) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Calculate probability based on real PR characteristics
+  let probability = 45; // Base probability
   
-  // Increase probability for:
-  // - PRs with more comments (community engagement)
-  // - PRs from repo owners/maintainers
-  // - PRs with specific labels
-  if (pr.comments > 5) probability += 15;
-  if (pr.comments > 10) probability += 10;
-  if (pr.labels.some(label => ['bug', 'enhancement', 'feature'].includes(label.name.toLowerCase()))) {
-    probability += 10;
-  }
-  if (!pr.draft) probability += 10;
+  // Increase probability based on real indicators:
+  if (pr.comments > 5) probability += 10;
+  if (pr.comments > 10) probability += 5;
+  if (pr.comments > 20) probability += 5;
   
-  // Calculate mock volume and change based on engagement
-  const volume = Math.floor(Math.random() * 10000) + pr.comments * 100;
-  const change = Math.floor(Math.random() * 50) + 10;
+  // Check for positive indicators in labels
+  const positiveLabels = ['enhancement', 'feature', 'bug', 'documentation', 'good first issue'];
+  const negativeLabels = ['wip', 'draft', 'blocked', 'needs-review'];
   
-  // Calculate time left (mock implementation)
+  const hasPositiveLabel = pr.labels.some(label => 
+    positiveLabels.some(pos => label.name.toLowerCase().includes(pos))
+  );
+  const hasNegativeLabel = pr.labels.some(label => 
+    negativeLabels.some(neg => label.name.toLowerCase().includes(neg))
+  );
+  
+  if (hasPositiveLabel) probability += 10;
+  if (hasNegativeLabel) probability -= 5;
+  if (!pr.draft) probability += 5;
+  if (pr.assignees.length > 0) probability += 5;
+  
+  // Factor in PR age - newer PRs might be more likely to be merged
   const createdDate = new Date(pr.created_at);
   const daysSinceCreated = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-  const estimatedDaysLeft = Math.max(1, 14 - daysSinceCreated); // Assume 2 week lifecycle
   
+  if (daysSinceCreated < 7) probability += 5; // Fresh PRs
+  if (daysSinceCreated > 30) probability -= 10; // Old PRs might be stale
+  
+  // Ensure probability stays within bounds
+  probability = Math.max(5, Math.min(90, probability));
+  
+  // Calculate realistic volume based on repository activity and PR engagement (deterministic)
+  const baseVolume = Math.max(100, pr.comments * 50);
+  const volumeVariation = seedRandom(1.23) * 0.5 + 0.75; // 75% to 125% variation, but consistent
+  const volume = Math.floor(baseVolume * volumeVariation);
+  
+  // Calculate change percentage based on recent activity (deterministic)
+  const updatedDate = new Date(pr.updated_at);
+  const hoursSinceUpdated = Math.floor((Date.now() - updatedDate.getTime()) / (1000 * 60 * 60));
+  
+  let change = 0;
+  if (hoursSinceUpdated < 24) {
+    change = Math.floor(seedRandom(2.34) * 15) + 5; // Recent activity = positive change
+  } else if (hoursSinceUpdated < 72) {
+    change = Math.floor(seedRandom(3.45) * 10) - 5; // Moderate change
+  } else {
+    change = Math.floor(seedRandom(4.56) * 8) - 4; // Older = smaller change
+  }
+  
+  // Calculate realistic time left based on PR age and activity
+  let estimatedDaysLeft = 7; // Default estimate
+  if (daysSinceCreated < 3) estimatedDaysLeft = 10; // Fresh PRs have more time
+  else if (daysSinceCreated < 14) estimatedDaysLeft = 7;
+  else if (daysSinceCreated < 30) estimatedDaysLeft = 3;
+  else estimatedDaysLeft = 1; // Old PRs should resolve soon
+  
+  // Calculate participants based on engagement
+  const participants = Math.max(1, Math.floor(pr.comments * 0.3) + pr.assignees.length + 1);
+
   return {
     id: pr.id,
     repo: repoName,
     prNumber: pr.number,
     title: pr.title,
     author: pr.user.login,
-    probability: Math.min(95, probability),
+    probability,
     price: probability / 100,
     change,
     volume,
     status: pr.state === 'open' ? (pr.draft ? 'open' : 'review') : 'closed',
     tags: pr.labels.map(label => label.name).slice(0, 3), // First 3 labels
     timeLeft: `${estimatedDaysLeft}d`,
-    participants: Math.floor(volume / 100), // Mock participants based on volume
+    participants,
   };
 }
 
@@ -214,33 +282,105 @@ export function useGitHubMarkets() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const githubAPI = useGitHubAPI();
 
-  // Load markets from popular repositories
+  // Predefined list of popular repositories with active PRs
+  const popularRepos = [
+    'facebook/react',
+    'microsoft/typescript',
+    'nodejs/node',
+    'vercel/next.js',
+    'microsoft/vscode',
+    'angular/angular',
+    'vuejs/vue',
+    'tensorflow/tensorflow',
+    'kubernetes/kubernetes',
+    'golang/go',
+    'rust-lang/rust',
+    'python/cpython',
+  ];
+
+  // Load markets from popular repositories and trending repos
   const loadTrendingMarkets = async () => {
-    const trendingRepos = await githubAPI.fetchTrendingRepositories();
-    const allMarkets: Market[] = [];
+    try {
+      const allMarkets: Market[] = [];
 
-    for (const repo of trendingRepos.slice(0, 10)) { // Limit to 10 repos
-      const prs = await githubAPI.fetchPullRequests(repo.owner.login, repo.name, 'open', 5);
-      const repoMarkets = prs.map(pr => convertPRToMarket(pr, repo.full_name));
-      allMarkets.push(...repoMarkets);
+      // First, try to get some trending repositories
+      const trendingRepos = await githubAPI.fetchTrendingRepositories();
+      const reposToProcess = [...popularRepos];
+      
+      // Add some trending repos if we got them successfully
+      if (trendingRepos.length > 0) {
+        const trendingRepoNames = trendingRepos
+          .slice(0, 5)
+          .map(repo => repo.full_name);
+        reposToProcess.push(...trendingRepoNames);
+      }
+
+      // Process repositories in smaller batches to avoid rate limiting
+      const batchSize = 3;
+      for (let i = 0; i < Math.min(reposToProcess.length, 9); i += batchSize) {
+        const batch = reposToProcess.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(async (repoName) => {
+          const [owner, repo] = repoName.split('/');
+          if (!owner || !repo) return [];
+          
+          try {
+            const prs = await githubAPI.fetchPullRequests(owner, repo, 'open', 3);
+            return prs.map(pr => convertPRToMarket(pr, repoName));
+          } catch (error) {
+            console.warn(`Failed to fetch PRs for ${repoName}:`, error);
+            return [];
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        const batchMarkets = batchResults.flat();
+        allMarkets.push(...batchMarkets);
+
+        // Add a small delay between batches to be nice to the API
+        if (i + batchSize < reposToProcess.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      setMarkets(allMarkets);
+      return allMarkets;
+    } catch (error) {
+      console.error('Error loading trending markets:', error);
+      throw error;
     }
-
-    setMarkets(allMarkets);
-    return allMarkets;
   };
 
-  // Search for markets by repository
+  // Search for markets by repository with better error handling
   const searchMarkets = async (query: string): Promise<Market[]> => {
-    const repos = await githubAPI.searchRepositories(query);
-    const allMarkets: Market[] = [];
+    try {
+      // If query looks like a specific repo (owner/repo), fetch it directly
+      if (query.includes('/') && query.split('/').length === 2) {
+        const [owner, repo] = query.split('/');
+        const prs = await githubAPI.fetchPullRequests(owner, repo, 'open', 10);
+        return prs.map(pr => convertPRToMarket(pr, query));
+      }
 
-    for (const repo of repos.slice(0, 5)) { // Limit to 5 repos
-      const prs = await githubAPI.fetchPullRequests(repo.owner.login, repo.name, 'open', 5);
-      const repoMarkets = prs.map(pr => convertPRToMarket(pr, repo.full_name));
-      allMarkets.push(...repoMarkets);
+      // Otherwise, search for repositories and get their PRs
+      const repos = await githubAPI.searchRepositories(query, 'stars', 10);
+      const allMarkets: Market[] = [];
+
+      // Process first 3 repositories to avoid rate limiting
+      for (const repo of repos.slice(0, 3)) {
+        try {
+          const prs = await githubAPI.fetchPullRequests(repo.owner.login, repo.name, 'open', 5);
+          const repoMarkets = prs.map(pr => convertPRToMarket(pr, repo.full_name));
+          allMarkets.push(...repoMarkets);
+        } catch (error) {
+          console.warn(`Failed to fetch PRs for ${repo.full_name}:`, error);
+        }
+      }
+
+      return allMarkets;
+    } catch (error) {
+      console.error('Error searching markets:', error);
+      throw error;
     }
-
-    return allMarkets;
   };
 
   return {

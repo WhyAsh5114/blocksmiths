@@ -92,26 +92,93 @@ contract ProjectCoinFactory is Ownable, ReentrancyGuard {
         require(bytes(_name).length > 0, "Token name cannot be empty");
         require(bytes(_symbol).length > 0, "Token symbol cannot be empty");
         
-        // Use default addresses if not provided
-        address treasury = _treasury != address(0) ? _treasury : defaultTreasury;
-        address rewardPool = _rewardPool != address(0) ? _rewardPool : defaultRewardPool;
+        // Deploy the token and get its address
+        address tokenAddress = _deployTokenWithAddresses(_name, _symbol, _githubOwner, _githubRepo, _treasury, _rewardPool);
         
-        // Deploy new ProjectCoin contract
-        ProjectCoin newToken = new ProjectCoin(
+        // Store project information and update mappings
+        _storeProjectInfo(tokenAddress, _name, _symbol, _githubOwner, _githubRepo);
+        
+        // Handle payment refund
+        _handlePaymentRefund();
+        
+        // Emit event
+        _emitCreationEvent(tokenAddress, _name, _symbol, _githubOwner, _githubRepo);
+        
+        return tokenAddress;
+    }
+    
+    /**
+     * @dev Internal function to emit creation event
+     */
+    function _emitCreationEvent(
+        address tokenAddress,
+        string memory _name,
+        string memory _symbol,
+        string memory _githubOwner,
+        string memory _githubRepo
+    ) internal {
+        string memory repoKey = string(abi.encodePacked(_githubOwner, "/", _githubRepo));
+        emit ProjectCoinCreated(
+            tokenAddress,
+            repoKey,
+            msg.sender,
+            _githubOwner,
+            _githubRepo,
+            _name,
+            _symbol
+        );
+    }
+    
+    /**
+     * @dev Internal function to deploy the ProjectCoin token with resolved addresses
+     */
+    function _deployTokenWithAddresses(
+        string memory _name,
+        string memory _symbol,
+        string memory _githubOwner,
+        string memory _githubRepo,
+        address _treasury,
+        address _rewardPool
+    ) internal returns (address) {
+        return address(_createProjectCoinContract(_name, _symbol, _githubOwner, _githubRepo, _treasury, _rewardPool));
+    }
+    
+    /**
+     * @dev Internal function to create ProjectCoin contract
+     */
+    function _createProjectCoinContract(
+        string memory _name,
+        string memory _symbol,
+        string memory _githubOwner,
+        string memory _githubRepo,
+        address _treasury,
+        address _rewardPool
+    ) internal returns (ProjectCoin) {
+        return new ProjectCoin(
             _name,
             _symbol,
             _githubOwner,
             _githubRepo,
-            treasury,
-            rewardPool,
-            msg.sender // Creator becomes initial owner
+            _treasury != address(0) ? _treasury : defaultTreasury,
+            _rewardPool != address(0) ? _rewardPool : defaultRewardPool,
+            msg.sender
         );
+    }
+    
+    /**
+     * @dev Internal function to store project information
+     */
+    function _storeProjectInfo(
+        address tokenAddress,
+        string memory _name,
+        string memory _symbol,
+        string memory _githubOwner,
+        string memory _githubRepo
+    ) internal {
+        // Update mappings and arrays directly to avoid struct creation
+        repoToToken[_githubOwner][_githubRepo] = tokenAddress;
         
-        address tokenAddress = address(newToken);
-        string memory repoKey = string(abi.encodePacked(_githubOwner, "/", _githubRepo));
-        
-        // Store project information
-        ProjectInfo memory projectInfo = ProjectInfo({
+        tokenToProject[tokenAddress] = ProjectInfo({
             tokenAddress: tokenAddress,
             name: _name,
             symbol: _symbol,
@@ -122,29 +189,18 @@ contract ProjectCoinFactory is Ownable, ReentrancyGuard {
             isActive: true
         });
         
-        // Update mappings and arrays
-        repoToToken[_githubOwner][_githubRepo] = tokenAddress;
-        tokenToProject[tokenAddress] = projectInfo;
         creatorToTokens[msg.sender].push(tokenAddress);
         allTokens.push(tokenAddress);
-        allRepoKeys.push(repoKey);
-        
-        // Refund excess payment
+        allRepoKeys.push(string(abi.encodePacked(_githubOwner, "/", _githubRepo)));
+    }
+    
+    /**
+     * @dev Internal function to handle payment refund
+     */
+    function _handlePaymentRefund() internal {
         if (msg.value > creationFee) {
             payable(msg.sender).transfer(msg.value - creationFee);
         }
-        
-        emit ProjectCoinCreated(
-            tokenAddress,
-            repoKey,
-            msg.sender,
-            _githubOwner,
-            _githubRepo,
-            _name,
-            _symbol
-        );
-        
-        return tokenAddress;
     }
     
     /**
@@ -183,11 +239,19 @@ contract ProjectCoinFactory is Ownable, ReentrancyGuard {
             end = allTokens.length;
         }
         
-        ProjectInfo[] memory projects = new ProjectInfo[](end - _offset);
+        return _buildProjectList(_offset, end);
+    }
+    
+    /**
+     * @dev Internal function to build project list
+     */
+    function _buildProjectList(uint256 _start, uint256 _end) 
+        internal view returns (ProjectInfo[] memory, uint256) {
+        ProjectInfo[] memory projects = new ProjectInfo[](_end - _start);
         uint256 activeCount = 0;
         
-        for (uint256 i = _offset; i < end; i++) {
-            ProjectInfo memory project = tokenToProject[allTokens[i]];
+        for (uint256 i = _start; i < _end; i++) {
+            ProjectInfo storage project = tokenToProject[allTokens[i]];
             if (project.isActive) {
                 projects[activeCount] = project;
                 activeCount++;
@@ -207,21 +271,46 @@ contract ProjectCoinFactory is Ownable, ReentrancyGuard {
      */
     function searchByOwner(string memory _githubOwner) 
         external view returns (ProjectInfo[] memory) {
-        ProjectInfo[] memory tempResults = new ProjectInfo[](allTokens.length);
+        uint256 count = _countProjectsByOwner(_githubOwner);
+        if (count == 0) {
+            return new ProjectInfo[](0);
+        }
+        
+        return _getProjectsByOwner(_githubOwner, count);
+    }
+    
+    /**
+     * @dev Internal function to count projects by owner
+     */
+    function _countProjectsByOwner(string memory _githubOwner) internal view returns (uint256) {
         uint256 count = 0;
+        bytes32 ownerHash = keccak256(bytes(_githubOwner));
         
         for (uint256 i = 0; i < allTokens.length; i++) {
-            ProjectInfo memory project = tokenToProject[allTokens[i]];
-            if (project.isActive && keccak256(bytes(project.githubOwner)) == keccak256(bytes(_githubOwner))) {
-                tempResults[count] = project;
+            ProjectInfo storage project = tokenToProject[allTokens[i]];
+            if (project.isActive && keccak256(bytes(project.githubOwner)) == ownerHash) {
                 count++;
             }
         }
         
-        // Resize array to actual results
+        return count;
+    }
+    
+    /**
+     * @dev Internal function to get projects by owner
+     */
+    function _getProjectsByOwner(string memory _githubOwner, uint256 count) 
+        internal view returns (ProjectInfo[] memory) {
         ProjectInfo[] memory results = new ProjectInfo[](count);
-        for (uint256 i = 0; i < count; i++) {
-            results[i] = tempResults[i];
+        uint256 index = 0;
+        bytes32 ownerHash = keccak256(bytes(_githubOwner));
+        
+        for (uint256 i = 0; i < allTokens.length && index < count; i++) {
+            ProjectInfo storage project = tokenToProject[allTokens[i]];
+            if (project.isActive && keccak256(bytes(project.githubOwner)) == ownerHash) {
+                results[index] = project;
+                index++;
+            }
         }
         
         return results;

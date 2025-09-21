@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useGitHubMarkets } from './api/useGitHubAPI';
-import { useProjectCoinFactory, ProjectInfo } from './web3/useProjectCoin';
+import { useProjectCoinFactory, useProjectCoinContract, ProjectInfo } from './web3/useProjectCoin';
 import { Market } from '@/app/(app)/dashboard/types';
+import { formatEther } from 'viem';
 
 export interface IntegratedMarket extends Market {
   hasToken: boolean;
   tokenAddress?: string;
   totalSupply?: string;
   marketCap?: number;
+  mintCost?: string;
 }
 
 export function useIntegratedMarkets() {
@@ -30,33 +32,49 @@ export function useIntegratedMarkets() {
       // Get existing project coins from factory
       const projectCoins = projectCoinFactory.allProjects || [];
       
-      // Create a map of repository -> token address
-      const tokenMap = new Map<string, { address: string; totalSupply: string }>();
+      // Create a map of repository -> token info
+      const tokenMap = new Map<string, ProjectInfo>();
       projectCoins.forEach((project: ProjectInfo) => {
-        tokenMap.set(`${project.githubOwner}/${project.githubRepo}`, {
-          address: project.tokenAddress,
-          totalSupply: '0', // We'll need to fetch this separately
-        });
+        const repoKey = `${project.githubOwner}/${project.githubRepo}`;
+        tokenMap.set(repoKey, project);
       });
 
       // Integrate the data
-      const integratedMarkets: IntegratedMarket[] = githubMarkets.markets.map((market: Market) => {
-        const tokenInfo = tokenMap.get(market.repo);
-        const hasToken = !!tokenInfo;
-        
-        // Calculate mock market cap if token exists
-        const marketCap = hasToken && tokenInfo 
-          ? parseFloat(tokenInfo.totalSupply) * market.price * 1000 // Mock calculation
-          : undefined;
+      const integratedMarkets: IntegratedMarket[] = await Promise.all(
+        githubMarkets.markets.map(async (market: Market) => {
+          const tokenInfo = tokenMap.get(market.repo);
+          const hasToken = !!tokenInfo;
+          
+          let totalSupply = '0';
+          let marketCap: number | undefined;
+          let mintCost = '0';
+          
+          // If token exists, fetch real contract data
+          if (hasToken && tokenInfo) {
+            try {
+              // This would ideally use a hook to get token contract data
+              // For now, we'll use the tokenAddress to indicate a token exists
+              totalSupply = '1000000'; // Placeholder - would need actual contract call
+              mintCost = '0.001'; // Placeholder - would need actual contract call
+              
+              // Calculate market cap: totalSupply * price
+              const supply = parseFloat(totalSupply);
+              marketCap = supply * market.price;
+            } catch (contractError) {
+              console.warn(`Failed to fetch contract data for ${market.repo}:`, contractError);
+            }
+          }
 
-        return {
-          ...market,
-          hasToken,
-          tokenAddress: tokenInfo?.address,
-          totalSupply: tokenInfo?.totalSupply,
-          marketCap,
-        };
-      });
+          return {
+            ...market,
+            hasToken,
+            tokenAddress: tokenInfo?.tokenAddress,
+            totalSupply,
+            marketCap,
+            mintCost,
+          } as IntegratedMarket;
+        })
+      );
 
       setMarkets(integratedMarkets);
       return integratedMarkets;
@@ -78,30 +96,42 @@ export function useIntegratedMarkets() {
       const searchResults = await githubMarkets.searchMarkets(query);
       const projectCoins = projectCoinFactory.allProjects || [];
       
-      const tokenMap = new Map<string, { address: string; totalSupply: string }>();
+      const tokenMap = new Map<string, ProjectInfo>();
       projectCoins.forEach((project: ProjectInfo) => {
-        tokenMap.set(`${project.githubOwner}/${project.githubRepo}`, {
-          address: project.tokenAddress,
-          totalSupply: '0', // We'll need to fetch this separately
-        });
+        const repoKey = `${project.githubOwner}/${project.githubRepo}`;
+        tokenMap.set(repoKey, project);
       });
 
-      const integratedResults: IntegratedMarket[] = searchResults.map((market: Market) => {
-        const tokenInfo = tokenMap.get(market.repo);
-        const hasToken = !!tokenInfo;
-        
-        const marketCap = hasToken && tokenInfo 
-          ? parseFloat(tokenInfo.totalSupply) * market.price * 1000
-          : undefined;
+      const integratedResults: IntegratedMarket[] = await Promise.all(
+        searchResults.map(async (market: Market) => {
+          const tokenInfo = tokenMap.get(market.repo);
+          const hasToken = !!tokenInfo;
+          
+          let totalSupply = '0';
+          let marketCap: number | undefined;
+          let mintCost = '0';
+          
+          if (hasToken && tokenInfo) {
+            try {
+              // Fetch real contract data if token exists
+              totalSupply = '1000000'; // Placeholder
+              mintCost = '0.001'; // Placeholder
+              marketCap = parseFloat(totalSupply) * market.price;
+            } catch (contractError) {
+              console.warn(`Failed to fetch contract data for ${market.repo}:`, contractError);
+            }
+          }
 
-        return {
-          ...market,
-          hasToken,
-          tokenAddress: tokenInfo?.address,
-          totalSupply: tokenInfo?.totalSupply,
-          marketCap,
-        };
-      });
+          return {
+            ...market,
+            hasToken,
+            tokenAddress: tokenInfo?.tokenAddress,
+            totalSupply,
+            marketCap,
+            mintCost,
+          } as IntegratedMarket;
+        })
+      );
 
       return integratedResults;
     } catch (err) {
@@ -138,7 +168,7 @@ export function useIntegratedMarkets() {
   return {
     markets,
     isLoading: isLoading || githubMarkets.isLoading || projectCoinFactory.isLoadingProjects,
-    error: error || githubMarkets.error,
+    error: error || githubMarkets.error || projectCoinFactory.contractError || projectCoinFactory.writeError,
     
     // Functions
     integrateMarkets,
