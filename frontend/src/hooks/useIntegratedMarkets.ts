@@ -4,6 +4,21 @@ import { useProjectCoinFactory, useProjectCoinContract, ProjectInfo } from './we
 import { Market } from '@/app/(app)/dashboard/types';
 import { formatEther } from 'viem';
 
+/*
+ * IMPROVEMENT SUMMARY: Factory-First Market Discovery
+ * 
+ * BEFORE: 
+ * - Hardcoded popular repos → GitHub API → Try to match with factory tokens
+ * - Showed "fake" markets for repos without tokens
+ * - Wasted API calls on repos without actual trading
+ * 
+ * AFTER:
+ * - Factory contract → Real registered tokens → GitHub API for those specific repos
+ * - Shows only real markets users can trade
+ * - Discovery mode only when no tokens exist yet
+ * - Clear separation between real markets and discovery
+ */
+
 export interface IntegratedMarket extends Market {
   hasToken: boolean;
   tokenAddress?: string;
@@ -20,64 +35,118 @@ export function useIntegratedMarkets() {
   const githubMarkets = useGitHubMarkets();
   const projectCoinFactory = useProjectCoinFactory();
 
-  // Combine GitHub data with Web3 data
-  const integrateMarkets = async (): Promise<IntegratedMarket[]> => {
+  /*
+   * DESIGN PHILOSOPHY: Factory-First Discovery
+   * 
+   * Instead of showing hardcoded popular repos (that may not have tokens),
+   * we prioritize ACTUAL registered tokens from the factory contract.
+   * 
+   * Benefits:
+   * ✅ Shows real markets users can trade
+   * ✅ No "fake" markets without tokens
+   * ✅ Efficient GitHub API usage
+   * ✅ True decentralized discovery
+   * 
+   * Flow:
+   * 1. Load registered tokens from factory
+   * 2. Fetch GitHub PR data for those specific repos
+   * 3. Show discovery mode only when no tokens exist yet
+   */
+
+  // Factory-First Market Discovery
+  const fetchIntegratedMarkets = async (): Promise<IntegratedMarket[]> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Load GitHub markets
-      await githubMarkets.loadTrendingMarkets();
-      
-      // Get existing project coins from factory
+      // Step 1: Get all registered tokens from factory
       const projectCoins = projectCoinFactory.allProjects || [];
+      console.log('🏭 Factory projects found:', projectCoins.length, projectCoins);
       
-      // Create a map of repository -> token info
-      const tokenMap = new Map<string, ProjectInfo>();
-      projectCoins.forEach((project: ProjectInfo) => {
-        const repoKey = `${project.githubOwner}/${project.githubRepo}`;
-        tokenMap.set(repoKey, project);
-      });
-
-      // Integrate the data
-      const integratedMarkets: IntegratedMarket[] = await Promise.all(
-        githubMarkets.markets.map(async (market: Market) => {
-          const tokenInfo = tokenMap.get(market.repo);
-          const hasToken = !!tokenInfo;
+      if (projectCoins.length === 0) {
+        // No registered tokens yet - use discovery mode with popular repos
+        console.log('🔍 No registered tokens found, using discovery mode');
+        const discoveryMarkets = await githubMarkets.getPopularMarkets();
+        console.log('📊 Discovery markets found:', discoveryMarkets.length, discoveryMarkets);
+        const integratedDiscoveryMarkets: IntegratedMarket[] = discoveryMarkets.map((market: Market) => ({
+          ...market,
+          hasToken: false,
+        }));
+        setMarkets(integratedDiscoveryMarkets);
+        return integratedDiscoveryMarkets;
+      }      // Fetch GitHub data for each registered token
+      const marketArrays = await Promise.all(
+        projectCoins.map(async (project: ProjectInfo) => {
+          const repoName = `${project.githubOwner}/${project.githubRepo}`;
           
-          let totalSupply = '0';
-          let marketCap: number | undefined;
-          let mintCost = '0';
-          
-          // If token exists, fetch real contract data
-          if (hasToken && tokenInfo) {
-            try {
-              // This would ideally use a hook to get token contract data
-              // For now, we'll use the tokenAddress to indicate a token exists
-              totalSupply = '1000000'; // Placeholder - would need actual contract call
-              mintCost = '0.001'; // Placeholder - would need actual contract call
-              
-              // Calculate market cap: totalSupply * price
-              const supply = parseFloat(totalSupply);
-              marketCap = supply * market.price;
-            } catch (contractError) {
-              console.warn(`Failed to fetch contract data for ${market.repo}:`, contractError);
+          try {
+            // Fetch real GitHub PR data for this specific repository
+            const repoMarkets = await githubMarkets.searchMarkets(repoName);
+            
+            // If we found PRs for this repo, create integrated markets
+            if (repoMarkets.length > 0) {
+              return repoMarkets.map((market: Market): IntegratedMarket => ({
+                ...market,
+                hasToken: true,
+                tokenAddress: project.tokenAddress,
+                totalSupply: '1000000', // TODO: Fetch from contract
+                mintCost: '0.001', // TODO: Fetch from contract
+                marketCap: parseFloat('1000000') * market.price,
+              }));
+            } else {
+              // Create a placeholder market for tokens without active PRs
+              return [{
+                id: parseInt(project.tokenAddress.slice(-8), 16), // Pseudo-random ID from address
+                repo: repoName,
+                prNumber: 0,
+                title: `${project.name} - No active PRs`,
+                author: project.creator,
+                probability: 50,
+                price: 0.001,
+                change: 0,
+                volume: 0,
+                status: 'open' as const,
+                tags: ['Token Available'],
+                timeLeft: 'N/A',
+                participants: 0,
+                hasToken: true,
+                tokenAddress: project.tokenAddress,
+                totalSupply: '1000000',
+                mintCost: '0.001',
+                marketCap: 1000,
+              } as IntegratedMarket];
             }
+          } catch (error) {
+            console.warn(`Failed to fetch GitHub data for ${repoName}:`, error);
+            // Return placeholder on error
+            return [{
+              id: parseInt(project.tokenAddress.slice(-8), 16),
+              repo: repoName,
+              prNumber: 0,
+              title: `${project.name} - GitHub data unavailable`,
+              author: project.creator,
+              probability: 50,
+              price: 0.001,
+              change: 0,
+              volume: 0,
+              status: 'open' as const,
+              tags: ['Token Available'],
+              timeLeft: 'N/A',
+              participants: 0,
+              hasToken: true,
+              tokenAddress: project.tokenAddress,
+              totalSupply: '1000000',
+              mintCost: '0.001',
+              marketCap: 1000,
+            } as IntegratedMarket];
           }
-
-          return {
-            ...market,
-            hasToken,
-            tokenAddress: tokenInfo?.tokenAddress,
-            totalSupply,
-            marketCap,
-            mintCost,
-          } as IntegratedMarket;
         })
       );
 
-      setMarkets(integratedMarkets);
-      return integratedMarkets;
+      const flattenedMarkets: IntegratedMarket[] = marketArrays.flat();
+      setMarkets(flattenedMarkets);
+      return flattenedMarkets;
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to integrate markets';
       setError(errorMessage);
@@ -154,7 +223,7 @@ export function useIntegratedMarkets() {
     try {
       await projectCoinFactory.createProjectCoin(repository, name, symbol, treasury, rewardPool);
       // Refresh markets after creation
-      setTimeout(() => integrateMarkets(), 2000); // Wait for transaction confirmation
+      setTimeout(() => fetchIntegratedMarkets(), 2000); // Wait for transaction confirmation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create market token');
     }
@@ -162,8 +231,25 @@ export function useIntegratedMarkets() {
 
   // Initialize on mount
   useEffect(() => {
-    integrateMarkets();
-  }, []);
+    console.log('🚀 useIntegratedMarkets useEffect triggered');
+    console.log('📋 Factory loading state:', projectCoinFactory.isLoading);
+    console.log('🏭 Factory projects:', projectCoinFactory.allProjects);
+    console.log('❌ Factory error:', projectCoinFactory.error);
+    
+    if (!projectCoinFactory.isLoading) {
+      fetchIntegratedMarkets();
+    }
+  }, [projectCoinFactory.isLoading, projectCoinFactory.allProjects]);
+
+  // Get only markets that have actual tokens (for a cleaner "real markets" view)
+  const getTokenMarkets = (): IntegratedMarket[] => {
+    return markets.filter(market => market.hasToken);
+  };
+
+  // Get discovery markets (popular repos without tokens for new token creation)
+  const getDiscoveryMarkets = (): IntegratedMarket[] => {
+    return markets.filter(market => !market.hasToken);
+  };
 
   return {
     markets,
@@ -171,7 +257,7 @@ export function useIntegratedMarkets() {
     error: error || githubMarkets.error || projectCoinFactory.contractError || projectCoinFactory.writeError,
     
     // Functions
-    integrateMarkets,
+    fetchIntegratedMarkets,
     searchIntegratedMarkets,
     createMarketToken,
     
@@ -182,5 +268,10 @@ export function useIntegratedMarkets() {
     
     // Factory data
     allProjectCoins: projectCoinFactory.allProjects,
+    
+    // New filtered views for better UX
+    tokenMarkets: getTokenMarkets(),
+    discoveryMarkets: getDiscoveryMarkets(),
+    hasRegisteredTokens: projectCoinFactory.allProjects && projectCoinFactory.allProjects.length > 0,
   };
 }

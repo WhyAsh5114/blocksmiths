@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardHeader } from './components/dashboard-header';
 import { SearchBar } from './components/search-bar';
 import { IntegratedMarketCard } from './components/integrated-market-card';
 import { useIntegratedMarkets } from '@/hooks/useIntegratedMarkets';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, Zap, Star, Clock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   
   const { 
     markets, 
@@ -21,24 +21,32 @@ export default function DashboardPage() {
     searchIntegratedMarkets, 
     createMarketToken,
     isCreatingToken,
-    tokenCreated 
+    tokenCreated,
+    tokenMarkets,
+    discoveryMarkets,
+    hasRegisteredTokens
   } = useIntegratedMarkets();
 
-  // Handle search
+  // Handle search with proper error handling
   useEffect(() => {
     const searchMarkets = async () => {
       if (searchQuery.trim()) {
         setIsSearching(true);
+        setSearchError(null);
         try {
           const results = await searchIntegratedMarkets(searchQuery);
           setSearchResults(results);
         } catch (err) {
           console.error('Search failed:', err);
+          setSearchError(err instanceof Error ? err.message : 'Search failed');
+          setSearchResults([]); // Clear results on error
         } finally {
           setIsSearching(false);
         }
       } else {
         setSearchResults([]);
+        setSearchError(null);
+        setIsSearching(false);
       }
     };
 
@@ -48,66 +56,57 @@ export default function DashboardPage() {
 
   const displayMarkets = searchQuery.trim() ? searchResults : markets;
 
-  // Memoize filtered markets to prevent unnecessary re-renders
-  const filteredMarkets = useMemo(() => {
-    const hotMarkets = displayMarkets.filter(m => m.change > 25);
-    const trendingMarkets = displayMarkets.filter(m => m.volume > 8000);
-    const newMarkets = displayMarkets.slice(-6);
-    const endingSoonMarkets = displayMarkets.filter(m => 
-      m.timeLeft.includes('1d') || m.timeLeft.includes('2d')
-    );
-
-    return {
-      hot: hotMarkets,
-      trending: trendingMarkets,
-      new: newMarkets,
-      ending: endingSoonMarkets,
-    };
-  }, [displayMarkets]);
-
   const handleCreateToken = (repository: string, name: string, symbol: string) => {
     createMarketToken(repository, name, symbol);
   };
-
-  if (error) {
-    return (
-      <div className="space-y-8">
-        <DashboardHeader />
-        <Card className="game-card border-red-400/50">
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <h3 className="text-lg font-semibold text-red-400">Error Loading Markets</h3>
-              <p className="text-red-300">{error}</p>
-              {error.includes('rate limit') && (
-                <div className="mt-4 p-4 bg-yellow-400/10 border border-yellow-400/20 rounded-lg text-left">
-                  <h4 className="font-semibold text-yellow-400 mb-2">How to fix this:</h4>
-                  <ol className="text-sm text-yellow-300 space-y-1 list-decimal list-inside">
-                    <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">GitHub Settings → Personal Access Tokens</a></li>
-                    <li>Click "Generate new token (classic)"</li>
-                    <li>Select the "public_repo" scope</li>
-                    <li>Copy the generated token</li>
-                    <li>Create a <code className="bg-black/20 px-1 rounded">.env.local</code> file in the frontend folder</li>
-                    <li>Add: <code className="bg-black/20 px-1 rounded">NEXT_PUBLIC_GITHUB_TOKEN=your_token_here</code></li>
-                    <li>Restart the development server</li>
-                  </ol>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
       <DashboardHeader />
       
       <div className="space-y-6">
+        {/* Search Bar - Always visible */}
         <SearchBar 
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
         />
+
+        {/* Global Error Display */}
+        {error && (
+          <Card className="game-card border-red-400/50">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <h3 className="text-lg font-semibold text-red-400">Error Loading Markets</h3>
+                <p className="text-red-300">{error}</p>
+                {error.includes('rate limit') && (
+                  <div className="mt-4 p-4 bg-yellow-400/10 border border-yellow-400/20 rounded-lg text-left">
+                    <h4 className="font-semibold text-yellow-400 mb-2">How to fix this:</h4>
+                    <ol className="text-sm text-yellow-300 space-y-1 list-decimal list-inside">
+                      <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">GitHub Settings → Personal Access Tokens</a></li>
+                      <li>Click "Generate new token (classic)"</li>
+                      <li>Select the "public_repo" scope</li>
+                      <li>Copy the generated token</li>
+                      <li>Create a <code className="bg-black/20 px-1 rounded">.env.local</code> file in the frontend folder</li>
+                      <li>Add: <code className="bg-black/20 px-1 rounded">NEXT_PUBLIC_GITHUB_TOKEN=your_token_here</code></li>
+                      <li>Restart the development server</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search Error Display */}
+        {searchError && (
+          <Card className="game-card border-red-400/50">
+            <CardContent className="p-4 text-center">
+              <div className="text-red-400">
+                Search error: {searchError}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Token Creation Status */}
         {isCreatingToken && (
@@ -131,15 +130,16 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Search Results or Market Tabs */}
+        {/* Main Content */}
         {searchQuery.trim() ? (
+          /* Search Results */
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Search Results</h2>
+              <h2 className="text-xl font-semibold">Search Results for "{searchQuery}"</h2>
               {isSearching && <Loader2 className="w-4 h-4 animate-spin" />}
             </div>
             
-            {displayMarkets.length === 0 && !isSearching && (
+            {displayMarkets.length === 0 && !isSearching && !searchError && (
               <Card className="game-card">
                 <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground">
@@ -160,39 +160,14 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <Tabs defaultValue="trending" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-1/2">
-              <TabsTrigger value="trending" className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Trending
-              </TabsTrigger>
-              <TabsTrigger value="hot" className="flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                Hot
-              </TabsTrigger>
-              <TabsTrigger value="new" className="flex items-center gap-2">
-                <Star className="w-4 h-4" />
-                New
-              </TabsTrigger>
-              <TabsTrigger value="ending" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Ending Soon
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="trending" className="space-y-4">
-              {isLoading ? (
-                <Card className="game-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading trending markets...
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
+          /* Default View */
+          <div className="space-y-6">
+            {/* Real Markets Section */}
+            {hasRegisteredTokens && tokenMarkets && tokenMarkets.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">🎯 Active Markets</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredMarkets.trending.slice(0, 9).map((market) => (
+                  {tokenMarkets.map((market) => (
                     <IntegratedMarketCard
                       key={`${market.repo}-${market.prNumber}`}
                       market={market}
@@ -200,45 +175,59 @@ export default function DashboardPage() {
                     />
                   ))}
                 </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="hot" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMarkets.hot.slice(0, 9).map((market) => (
-                  <IntegratedMarketCard
-                    key={`${market.repo}-${market.prNumber}`}
-                    market={market}
-                    onCreateToken={handleCreateToken}
-                  />
-                ))}
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="new" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMarkets.new.map((market) => (
-                  <IntegratedMarketCard
-                    key={`${market.repo}-${market.prNumber}`}
-                    market={market}
-                    onCreateToken={handleCreateToken}
-                  />
-                ))}
+            {/* Discovery Section */}
+            {(!hasRegisteredTokens || (discoveryMarkets && discoveryMarkets.length > 0)) && !error && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">
+                    {hasRegisteredTokens ? "🔍 Discover New Markets" : "🚀 Create Your First Market"}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {hasRegisteredTokens 
+                      ? "Popular repositories where you can create new prediction markets"
+                      : "Get started by creating prediction markets for popular GitHub repositories"
+                    }
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(hasRegisteredTokens ? discoveryMarkets : displayMarkets)?.slice(0, 9).map((market) => (
+                    <IntegratedMarketCard
+                      key={`${market.repo}-${market.prNumber}`}
+                      market={market}
+                      onCreateToken={handleCreateToken}
+                    />
+                  ))}
+                </div>
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="ending" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMarkets.ending.slice(0, 9).map((market) => (
-                  <IntegratedMarketCard
-                    key={`${market.repo}-${market.prNumber}`}
-                    market={market}
-                    onCreateToken={handleCreateToken}
-                  />
-                ))}
+            {/* Loading State */}
+            {isLoading && (!displayMarkets || displayMarkets.length === 0) && !error && (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  Loading markets...
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !error && (!displayMarkets || displayMarkets.length === 0) && (
+              <Card className="game-card">
+                <CardContent className="p-6 text-center">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">No Markets Available</h3>
+                    <p className="text-muted-foreground">
+                      Try refreshing the page or check your network connection.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
     </div>

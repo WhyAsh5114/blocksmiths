@@ -19,9 +19,11 @@ The app fetches real pull request data from GitHub repositories. To avoid rate l
 
 1. In the `frontend` folder, open `.env.local`
 2. Add your GitHub token:
+
    ```bash
    NEXT_PUBLIC_GITHUB_TOKEN=your_github_token_here
    ```
+
 3. Save the file
 
 ## 2. Smart Contract Setup
@@ -31,17 +33,20 @@ The app integrates with deployed smart contracts for creating and managing proje
 ### Option A: Deploy to Local Network (Recommended for Development)
 
 1. Start a local blockchain:
+
    ```bash
    cd blockchain
    npx hardhat node
    ```
 
 2. Deploy the contracts:
+
    ```bash
    npm run deploy -- --network localhost
    ```
 
 3. Copy the deployed factory address and add it to `frontend/.env.local`:
+
    ```bash
    NEXT_PUBLIC_FACTORY_ADDRESS=0x...
    ```
@@ -57,12 +62,14 @@ NEXT_PUBLIC_FACTORY_ADDRESS=0x...
 ## 3. Start the Application
 
 1. Install dependencies:
+
    ```bash
    cd frontend
    npm install
    ```
 
 2. Start the development server:
+
    ```bash
    npm run dev
    ```
@@ -78,16 +85,19 @@ NEXT_PUBLIC_FACTORY_ADDRESS=0x...
 ## Troubleshooting
 
 ### GitHub API Rate Limit (403 Error)
+
 - Ensure you've added a valid GitHub token to `.env.local`
 - Check that your token has the `public_repo` scope
 - Restart the development server after adding the token
 
 ### Contract Not Deployed Error
+
 - Make sure you've deployed the contracts and added the factory address
 - Verify the contract address is correct
 - Check that your wallet is connected to the right network
 
 ### No Markets Loading
+
 - Check browser console for error messages
 - Verify your GitHub token is valid
 - Ensure you have an internet connection
@@ -95,18 +105,21 @@ NEXT_PUBLIC_FACTORY_ADDRESS=0x...
 ## Features Without Mock Data
 
 ✅ **Real GitHub Data:**
+
 - Actual pull requests from popular repositories
 - Real repository search functionality
 - Authentic PR metadata (comments, labels, dates)
 - Realistic probability calculations based on PR characteristics
 
 ✅ **Real Web3 Integration:**
+
 - Deployed smart contract interaction
 - Real token creation and management
 - Actual transaction handling
 - Live contract state reading
 
 ✅ **Improved Error Handling:**
+
 - Clear error messages for API issues
 - Setup instructions for common problems
 - Better user guidance for configuration
