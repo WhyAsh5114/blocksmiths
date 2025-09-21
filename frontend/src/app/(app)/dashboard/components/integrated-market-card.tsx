@@ -94,7 +94,7 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Badge className="bg-primary/20 text-primary">
-                {market.tags[0] || 'PR'}
+                {(market.tags && market.tags[0]) || 'PR'}
               </Badge>
               {market.status === 'review' && (
                 <Badge className="bg-accent/20 text-accent">
