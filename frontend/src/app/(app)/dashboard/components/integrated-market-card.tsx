@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { GitBranch, Users, Clock, Coins, ExternalLink, Wallet } from "lucide-react";
 import { IntegratedMarket } from "@/hooks/useIntegratedMarkets";
 import { useProjectCoinContract } from "@/hooks/web3/useProjectCoin";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 
 interface IntegratedMarketCardProps {
@@ -16,9 +16,42 @@ interface IntegratedMarketCardProps {
 
 export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarketCardProps) {
   const [mintAmount, setMintAmount] = useState('1');
+  const [mintError, setMintError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const { isConnected } = useAccount();
   
-  const projectCoin = useProjectCoinContract(market.tokenAddress || '');
+  const projectCoin = useProjectCoinContract(market.tokenAddress || '', mintAmount);
+  
+  // Get the mint cost directly from the hook
+  const mintCostFormatted = projectCoin.mintCost && parseFloat(projectCoin.mintCost) > 0 
+    ? parseFloat(projectCoin.mintCost).toFixed(6) 
+    : '0';
+
+  // Clear errors when transaction succeeds and reset mint amount
+  useEffect(() => {
+    if (projectCoin.isSuccess) {
+      setMintError(null);
+      setMintAmount('1'); // Reset to default amount
+      setShowSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [projectCoin.isSuccess]);
+
+  // Clear errors when user changes amount
+  useEffect(() => {
+    if (mintError) {
+      setMintError(null);
+    }
+    if (showSuccess) {
+      setShowSuccess(false);
+    }
+  }, [mintAmount]);
 
   const handleCreateToken = () => {
     if (onCreateToken) {
@@ -28,9 +61,21 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
     }
   };
 
-  const handleMint = () => {
-    if (market.tokenAddress) {
-      projectCoin.mintTokens(mintAmount);
+  const handleMint = async () => {
+    if (!market.tokenAddress || !mintAmount) return;
+    
+    setMintError(null);
+    
+    try {
+      const amount = parseFloat(mintAmount);
+      if (amount <= 0) {
+        setMintError('Amount must be greater than 0');
+        return;
+      }
+      
+      await projectCoin.mintTokens(mintAmount);
+    } catch (error) {
+      setMintError(error instanceof Error ? error.message : 'Failed to mint tokens');
     }
   };
 
@@ -142,7 +187,9 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
               </div>
 
               <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Mint Cost: {projectCoin.mintCost} ETH</div>
+                <div className="text-sm text-muted-foreground">
+                  Mint Cost: {mintCostFormatted} ETH (for {mintAmount} tokens)
+                </div>
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -155,12 +202,17 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                   />
                   <Button 
                     onClick={handleMint}
-                    disabled={!isConnected || projectCoin.isPending}
+                    disabled={!isConnected || projectCoin.isPending || !mintAmount || parseFloat(mintAmount) <= 0}
                     className="px-6"
                   >
                     {projectCoin.isPending ? 'Minting...' : 'Mint'}
                   </Button>
                 </div>
+                {mintError && (
+                  <div className="text-sm text-red-400">
+                    {mintError}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -222,9 +274,14 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
               Confirming transaction...
             </div>
           )}
-          {projectCoin.isSuccess && (
+          {showSuccess && (
             <div className="text-center text-sm text-green-400">
-              Transaction successful! 🎉
+              🎉 Tokens minted successfully! Total supply updated.
+            </div>
+          )}
+          {projectCoin.writeError && (
+            <div className="text-center text-sm text-red-400">
+              Transaction failed: {projectCoin.writeError}
             </div>
           )}
         </div>
