@@ -66,7 +66,7 @@ export function useIntegratedMarkets() {
       if (projectCoins.length === 0) {
         // No registered tokens yet - use discovery mode with popular repos
         console.log('🔍 No registered tokens found, using discovery mode');
-        const discoveryMarkets = await githubMarkets.getPopularMarkets();
+        const discoveryMarkets = await githubMarkets.loadTrendingMarkets();
         console.log('📊 Discovery markets found:', discoveryMarkets.length, discoveryMarkets);
         const integratedDiscoveryMarkets: IntegratedMarket[] = discoveryMarkets.map((market: Market) => ({
           ...market,
@@ -232,14 +232,14 @@ export function useIntegratedMarkets() {
   // Initialize on mount
   useEffect(() => {
     console.log('🚀 useIntegratedMarkets useEffect triggered');
-    console.log('📋 Factory loading state:', projectCoinFactory.isLoading);
+    console.log('📋 Factory loading state:', projectCoinFactory.isLoadingProjects);
     console.log('🏭 Factory projects:', projectCoinFactory.allProjects);
-    console.log('❌ Factory error:', projectCoinFactory.error);
+    console.log('❌ Factory error:', projectCoinFactory.contractError);
     
-    if (!projectCoinFactory.isLoading) {
+    if (!projectCoinFactory.isLoadingProjects) {
       fetchIntegratedMarkets();
     }
-  }, [projectCoinFactory.isLoading, projectCoinFactory.allProjects]);
+  }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects]);
 
   // Get only markets that have actual tokens (for a cleaner "real markets" view)
   const getTokenMarkets = (): IntegratedMarket[] => {
