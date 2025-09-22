@@ -5,8 +5,9 @@ import { DashboardHeader } from './components/dashboard-header';
 import { SearchBar } from './components/search-bar';
 import { IntegratedMarketCard } from './components/integrated-market-card';
 import { useIntegratedMarkets } from '@/hooks/useIntegratedMarkets';
+import { useGitHubMarkets } from '@/hooks/api/useGitHubAPI';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search, Coins } from 'lucide-react';
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,24 +19,28 @@ export default function DashboardPage() {
     markets, 
     isLoading, 
     error, 
-    searchIntegratedMarkets, 
     createMarketToken,
     isCreatingToken,
     tokenCreated,
     tokenMarkets,
-    discoveryMarkets,
-    hasRegisteredTokens
+    hasRegisteredTokens,
+    allProjectCoins
   } = useIntegratedMarkets();
 
-  // Handle search with proper error handling
+  const githubMarkets = useGitHubMarkets();
+
+  // Handle search with proper error handling and debouncing
   useEffect(() => {
     const searchMarkets = async () => {
       if (searchQuery.trim()) {
         setIsSearching(true);
         setSearchError(null);
         try {
-          const results = await searchIntegratedMarkets(searchQuery);
-          setSearchResults(results);
+          const results = await githubMarkets.searchMarkets(searchQuery);
+          setSearchResults(results.map(market => ({
+            ...market,
+            hasToken: false // Discovery search results don't have tokens yet
+          })));
         } catch (err) {
           console.error('Search failed:', err);
           setSearchError(err instanceof Error ? err.message : 'Search failed');
@@ -52,9 +57,7 @@ export default function DashboardPage() {
 
     const timeoutId = setTimeout(searchMarkets, 500); // Debounce search
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, searchIntegratedMarkets]);
-
-  const displayMarkets = searchQuery.trim() ? searchResults : markets;
+  }, [searchQuery]);
 
   const handleCreateToken = (repository: string, name: string, symbol: string) => {
     createMarketToken(repository, name, symbol);
@@ -135,24 +138,25 @@ export default function DashboardPage() {
           /* Search Results */
           <div className="space-y-4">
             <div className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
               <h2 className="text-xl font-semibold">Search Results for "{searchQuery}"</h2>
               {isSearching && <Loader2 className="w-4 h-4 animate-spin" />}
             </div>
             
-            {displayMarkets.length === 0 && !isSearching && !searchError && (
+            {searchResults.length === 0 && !isSearching && !searchError && (
               <Card className="game-card">
                 <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground">
-                    No markets found for "{searchQuery}". Try searching for popular repositories like "facebook/react" or "microsoft/typescript".
+                    No repositories found for "{searchQuery}". Try searching for popular repositories like "facebook/react" or "microsoft/typescript".
                   </p>
                 </CardContent>
               </Card>
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayMarkets.slice(0, 12).map((market) => (
+              {searchResults.slice(0, 12).map((market) => (
                 <IntegratedMarketCard
-                  key={`${market.repo}-${market.prNumber}`}
+                  key={`search-${market.repo}-${market.prNumber}`}
                   market={market}
                   onCreateToken={handleCreateToken}
                 />
@@ -160,72 +164,85 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          /* Default View */
-          <div className="space-y-6">
-            {/* Real Markets Section */}
-            {hasRegisteredTokens && tokenMarkets && tokenMarkets.length > 0 && (
+          /* Default Dashboard View - Two Clear Sections */
+          <div className="space-y-8">
+            
+            {/* Section 1: Existing Projects in Contract */}
+            {hasRegisteredTokens && (
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Active Token Markets</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {tokenMarkets.map((market) => (
-                    <IntegratedMarketCard
-                      key={`${market.repo}-${market.prNumber}`}
-                      market={market}
-                      onCreateToken={handleCreateToken}
-                    />
-                  ))}
+                <div className="flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-green-400" />
+                  <h2 className="text-xl font-semibold">Active Token Markets</h2>
+                  <span className="text-sm text-muted-foreground">
+                    ({allProjectCoins?.length || 0} registered)
+                  </span>
                 </div>
+                <p className="text-muted-foreground">
+                  Live prediction markets with active tokens you can trade
+                </p>
+                
+                {tokenMarkets && tokenMarkets.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {tokenMarkets.map((market) => (
+                      <IntegratedMarketCard
+                        key={`token-${market.repo}-${market.prNumber}`}
+                        market={market}
+                        onCreateToken={handleCreateToken}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="game-card">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground">
+                        No active PRs found for registered repositories. Check back later or create tokens for repositories with open PRs.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
-            {/* Discovery Section */}
-            {(!hasRegisteredTokens || (discoveryMarkets && discoveryMarkets.length > 0)) && !error && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h2 className="text-xl font-semibold">
-                    {hasRegisteredTokens ? "Discover New Repositories" : "Create Your First Token"}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {hasRegisteredTokens 
-                      ? "Popular repositories where you can create new prediction markets"
-                      : "Get started by creating prediction markets for popular GitHub repositories"
-                    }
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(hasRegisteredTokens ? discoveryMarkets : displayMarkets)?.slice(0, 9).map((market) => (
-                    <IntegratedMarketCard
-                      key={`${market.repo}-${market.prNumber}`}
-                      market={market}
-                      onCreateToken={handleCreateToken}
-                    />
-                  ))}
-                </div>
+            {/* Section 2: Discovery Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Search className="w-5 h-5 text-blue-400" />
+                <h2 className="text-xl font-semibold">
+                  {hasRegisteredTokens ? "Discover New Repositories" : "Create Your First Token"}
+                </h2>
               </div>
-            )}
+              <p className="text-muted-foreground">
+                {hasRegisteredTokens 
+                  ? "Search for repositories above to create new prediction markets"
+                  : "Search for popular GitHub repositories to get started with your first prediction market"
+                }
+              </p>
+              
+              {!hasRegisteredTokens && (
+                <Card className="game-card border-blue-400/30 bg-blue-400/5">
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-blue-400">🎯 How to get started:</h3>
+                      <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                        <li>Search for a popular repository (e.g., "facebook/react")</li>
+                        <li>Find a repository with open pull requests</li>
+                        <li>Click "Create Token" to launch a prediction market</li>
+                        <li>Start trading on the outcome of pull requests!</li>
+                      </ol>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
             {/* Loading State */}
-            {isLoading && (!displayMarkets || displayMarkets.length === 0) && !error && (
+            {isLoading && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Loading markets...
+                  Loading contract data...
                 </div>
               </div>
-            )}
-
-            {/* Empty State */}
-            {!isLoading && !error && (!displayMarkets || displayMarkets.length === 0) && (
-              <Card className="game-card">
-                <CardContent className="p-6 text-center">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">No Markets Available</h3>
-                    <p className="text-muted-foreground">
-                      Try refreshing the page or check your network connection.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
             )}
           </div>
         )}

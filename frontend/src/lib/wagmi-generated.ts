@@ -785,6 +785,32 @@ export const projectCoinAbi = [
     type: 'event',
     anonymous: false,
     inputs: [
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'tokenAmount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'ethReceived',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'burnFee',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'TokensRedeemed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
       { name: 'from', internalType: 'address', type: 'address', indexed: true },
       { name: 'to', internalType: 'address', type: 'address', indexed: true },
       {
@@ -910,6 +936,13 @@ export const projectCoinAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: '_amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'getRedemptionValue',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [],
     name: 'getRepositoryInfo',
     outputs: [
@@ -969,6 +1002,13 @@ export const projectCoinAbi = [
     name: 'owner',
     outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'redeem',
+    outputs: [],
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',

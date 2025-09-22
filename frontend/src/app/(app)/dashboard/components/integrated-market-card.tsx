@@ -153,6 +153,9 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                 <div className="text-sm text-muted-foreground">
                   Mint Cost: {mintCostFormatted} ETH (for {mintAmount} tokens)
                 </div>
+                <div className="text-xs text-muted-foreground">
+                  💡 Price increases every 1000 tokens minted. Current batch price: {projectCoin.currentMintPrice || '0.001'} ETH per 1000 tokens.
+                </div>
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -163,6 +166,14 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                     min="0.01"
                     step="0.01"
                   />
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMintAmount('1000')}
+                    className="px-3 text-xs"
+                  >
+                    1K
+                  </Button>
                   <Button 
                     onClick={handleMint}
                     disabled={!isConnected || projectCoin.isPending || !mintAmount || parseFloat(mintAmount) <= 0}

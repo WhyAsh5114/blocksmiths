@@ -64,17 +64,13 @@ export function useIntegratedMarkets() {
       console.log('🏭 Factory projects found:', projectCoins.length, projectCoins);
       
       if (projectCoins.length === 0) {
-        // No registered tokens yet - use discovery mode with popular repos
-        console.log('🔍 No registered tokens found, using discovery mode');
-        const discoveryMarkets = await githubMarkets.loadTrendingMarkets();
-        console.log('📊 Discovery markets found:', discoveryMarkets.length, discoveryMarkets);
-        const integratedDiscoveryMarkets: IntegratedMarket[] = discoveryMarkets.map((market: Market) => ({
-          ...market,
-          hasToken: false,
-        }));
-        setMarkets(integratedDiscoveryMarkets);
-        return integratedDiscoveryMarkets;
-      }      // Fetch GitHub data for each registered token
+        // No registered tokens yet - return empty array, don't auto-load discovery
+        console.log('🔍 No registered tokens found, discovery mode available via search');
+        setMarkets([]);
+        return [];
+      }
+
+      // Fetch GitHub data for each registered token
       const marketArrays = await Promise.all(
         projectCoins.map(async (project: ProjectInfo) => {
           const repoName = `${project.githubOwner}/${project.githubRepo}`;
@@ -237,10 +233,10 @@ export function useIntegratedMarkets() {
     console.log('🏭 Factory projects:', projectCoinFactory.allProjects);
     console.log('❌ Factory error:', projectCoinFactory.contractError);
     
-    if (!projectCoinFactory.isLoadingProjects) {
+    if (!projectCoinFactory.isLoadingProjects && !projectCoinFactory.contractError) {
       fetchIntegratedMarkets();
     }
-  }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects]);
+  }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects?.length]);
 
   // Get only markets that have actual tokens (for a cleaner "real markets" view)
   const getTokenMarkets = (): IntegratedMarket[] => {

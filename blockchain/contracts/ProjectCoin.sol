@@ -39,6 +39,7 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     // Events
     event TokensMinted(address indexed user, uint256 amount, uint256 price, uint256 ethSpent);
     event TokensBurned(uint256 amount);
+    event TokensRedeemed(address indexed user, uint256 tokenAmount, uint256 ethReceived, uint256 burnFee);
     event PriceUpdated(uint256 newPrice);
     event FeesDistributed(uint256 treasury, uint256 rewardPool, uint256 buyback);
     
@@ -154,6 +155,52 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         _burn(msg.sender, _amount);
         totalBurned += _amount;
         emit TokensBurned(_amount);
+    }
+    
+    /**
+     * @dev Redeem tokens for ETH based on pro-rata share of contract balance
+     */
+    function redeem(uint256 _amount) external nonReentrant {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(balanceOf(msg.sender) >= _amount, "Insufficient balance");
+        
+        uint256 contractBalance = address(this).balance;
+        require(contractBalance > 0, "No ETH available for redemption");
+        
+        // Calculate pro-rata ETH amount
+        uint256 currentSupply = totalSupply();
+        require(currentSupply > 0, "No tokens in circulation");
+        
+        uint256 redemptionValue = (contractBalance * _amount) / currentSupply;
+        
+        // Apply small burn fee (2%) to discourage frequent redemptions
+        uint256 burnFee = (redemptionValue * 2) / 100;
+        uint256 netRedemption = redemptionValue - burnFee;
+        
+        require(netRedemption > 0, "Redemption amount too small");
+        require(netRedemption <= contractBalance, "Insufficient contract balance");
+        
+        // Burn tokens
+        _burn(msg.sender, _amount);
+        totalBurned += _amount;
+        
+        // Transfer ETH to user
+        payable(msg.sender).transfer(netRedemption);
+        
+        emit TokensRedeemed(msg.sender, _amount, netRedemption, burnFee);
+    }
+    
+    /**
+     * @dev Get current redemption value for a given amount of tokens
+     */
+    function getRedemptionValue(uint256 _amount) external view returns (uint256) {
+        if (totalSupply() == 0 || address(this).balance == 0 || _amount == 0) {
+            return 0;
+        }
+        
+        uint256 grossValue = (address(this).balance * _amount) / totalSupply();
+        uint256 burnFee = (grossValue * 2) / 100;
+        return grossValue - burnFee;
     }
     
     /**
