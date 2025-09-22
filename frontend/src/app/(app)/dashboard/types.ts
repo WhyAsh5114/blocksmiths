@@ -4,12 +4,12 @@ export interface Market {
   prNumber: number;
   title: string;
   author: string;
-  probability: number;
-  price: number;
-  change: number;
-  volume: number;
+  probability: number; // Keep for now but will show as N/A in UI
+  price: number; // Keep for now but will show as N/A in UI
+  change: number; // Keep for now but will show as N/A in UI
+  volume: number; // Keep for now but will show as N/A in UI
   status: "open" | "review" | "merged" | "closed";
   tags: string[];
-  timeLeft: string;
-  participants: number;
+  timeLeft: string; // Will show real time data
+  participants: number; // Keep for now but will show as N/A in UI
 }

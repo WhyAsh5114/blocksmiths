@@ -191,89 +191,25 @@ export function useGitHubAPI(options: UseGitHubAPIOptions = {}) {
 
 // Convert GitHub PR data to our Market interface
 export function convertPRToMarket(pr: GitHubPR, repoName: string): Market {
-  // Create a deterministic seed based on PR ID to ensure consistent values
-  const seed = pr.id;
-  const seedRandom = (multiplier: number) => {
-    const x = Math.sin(seed * multiplier) * 10000;
-    return x - Math.floor(x);
-  };
-
-  // Calculate probability based on real PR characteristics
-  let probability = 45; // Base probability
-  
-  // Increase probability based on real indicators:
-  if (pr.comments > 5) probability += 10;
-  if (pr.comments > 10) probability += 5;
-  if (pr.comments > 20) probability += 5;
-  
-  // Check for positive indicators in labels
-  const positiveLabels = ['enhancement', 'feature', 'bug', 'documentation', 'good first issue'];
-  const negativeLabels = ['wip', 'draft', 'blocked', 'needs-review'];
-  
-  const hasPositiveLabel = pr.labels.some(label => 
-    positiveLabels.some(pos => label.name.toLowerCase().includes(pos))
-  );
-  const hasNegativeLabel = pr.labels.some(label => 
-    negativeLabels.some(neg => label.name.toLowerCase().includes(neg))
-  );
-  
-  if (hasPositiveLabel) probability += 10;
-  if (hasNegativeLabel) probability -= 5;
-  if (!pr.draft) probability += 5;
-  if (pr.assignees.length > 0) probability += 5;
-  
-  // Factor in PR age - newer PRs might be more likely to be merged
+  // Calculate time since created for display
   const createdDate = new Date(pr.created_at);
   const daysSinceCreated = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
   
-  if (daysSinceCreated < 7) probability += 5; // Fresh PRs
-  if (daysSinceCreated > 30) probability -= 10; // Old PRs might be stale
-  
-  // Ensure probability stays within bounds
-  probability = Math.max(5, Math.min(90, probability));
-  
-  // Calculate realistic volume based on repository activity and PR engagement (deterministic)
-  const baseVolume = Math.max(100, pr.comments * 50);
-  const volumeVariation = seedRandom(1.23) * 0.5 + 0.75; // 75% to 125% variation, but consistent
-  const volume = Math.floor(baseVolume * volumeVariation);
-  
-  // Calculate change percentage based on recent activity (deterministic)
-  const updatedDate = new Date(pr.updated_at);
-  const hoursSinceUpdated = Math.floor((Date.now() - updatedDate.getTime()) / (1000 * 60 * 60));
-  
-  let change = 0;
-  if (hoursSinceUpdated < 24) {
-    change = Math.floor(seedRandom(2.34) * 15) + 5; // Recent activity = positive change
-  } else if (hoursSinceUpdated < 72) {
-    change = Math.floor(seedRandom(3.45) * 10) - 5; // Moderate change
-  } else {
-    change = Math.floor(seedRandom(4.56) * 8) - 4; // Older = smaller change
-  }
-  
-  // Calculate realistic time left based on PR age and activity
-  let estimatedDaysLeft = 7; // Default estimate
-  if (daysSinceCreated < 3) estimatedDaysLeft = 10; // Fresh PRs have more time
-  else if (daysSinceCreated < 14) estimatedDaysLeft = 7;
-  else if (daysSinceCreated < 30) estimatedDaysLeft = 3;
-  else estimatedDaysLeft = 1; // Old PRs should resolve soon
-  
-  // Calculate participants based on engagement
-  const participants = Math.max(1, Math.floor(pr.comments * 0.3) + pr.assignees.length + 1);
-
+  // Use real PR data only
   return {
     id: pr.id,
     repo: repoName,
     prNumber: pr.number,
     title: pr.title,
     author: pr.user.login,
-    probability,
-    price: probability / 100,
-    change,
-    volume,
+    probability: 0, // We don't predict - this will be hidden in UI
+    price: 0, // No fake pricing
+    change: 0, // No fake changes
+    volume: 0, // No fake volume
     status: pr.state === 'open' ? (pr.draft ? 'open' : 'review') : 'closed',
-    tags: pr.labels.map(label => label.name).slice(0, 3), // First 3 labels
-    timeLeft: `${estimatedDaysLeft}d`,
-    participants,
+    tags: pr.labels.map(label => label.name).slice(0, 3), // Real GitHub labels
+    timeLeft: `${daysSinceCreated}d ago`, // Real time data
+    participants: 0, // No fake participants
   };
 }
 

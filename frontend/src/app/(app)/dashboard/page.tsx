@@ -165,7 +165,7 @@ export default function DashboardPage() {
             {/* Real Markets Section */}
             {hasRegisteredTokens && tokenMarkets && tokenMarkets.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">🎯 Active Markets</h2>
+                <h2 className="text-xl font-semibold">Active Token Markets</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {tokenMarkets.map((market) => (
                     <IntegratedMarketCard
@@ -183,7 +183,7 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h2 className="text-xl font-semibold">
-                    {hasRegisteredTokens ? "🔍 Discover New Markets" : "🚀 Create Your First Market"}
+                    {hasRegisteredTokens ? "Discover New Repositories" : "Create Your First Token"}
                   </h2>
                   <p className="text-muted-foreground">
                     {hasRegisteredTokens 
