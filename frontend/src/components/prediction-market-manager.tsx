@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, useConfig } from "wagmi";
 import { parseEther, formatEther, Address } from "viem";
+import { readContract } from '@wagmi/core';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { predictionMarketAbi } from "@/lib/wagmi-generated";
 import { ExternalLink, GitPullRequest, Clock, Users, DollarSign } from "lucide-react";
 
-// Replace with your deployed PredictionMarket contract address
-const PREDICTION_MARKET_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" as Address;
+// Get the deployed PredictionMarket contract address from environment
+const PREDICTION_MARKET_ADDRESS = (process.env.NEXT_PUBLIC_PREDICTION_MARKET_ADDRESS || "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512") as Address;
 
 interface GitHubPR {
   number: number;
@@ -43,12 +44,20 @@ interface PredictionMarket {
 
 export default function PredictionMarketManager() {
   const { address, isConnected } = useAccount();
+  const config = useConfig();
   const [repoInput, setRepoInput] = useState("");
   const [availablePRs, setAvailablePRs] = useState<GitHubPR[]>([]);
   const [selectedPR, setSelectedPR] = useState<GitHubPR | null>(null);
   const [markets, setMarkets] = useState<PredictionMarket[]>([]);
   const [isLoadingPRs, setIsLoadingPRs] = useState(false);
   const [prError, setPrError] = useState<string | null>(null);
+
+  // Get all active markets from contract
+  const { data: activeMarketIds } = useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: predictionMarketAbi,
+    functionName: "getActiveMarkets",
+  });
 
   // Contract interactions
   const { writeContract: createMarket, data: createMarketHash } = useWriteContract();
@@ -149,31 +158,70 @@ export default function PredictionMarketManager() {
     }
   };
 
-  // Load existing markets (demo data for now)
+  // Load existing markets from contract
   useEffect(() => {
-    setMarkets([
-      {
-        id: "0",
-        description: "Will PR #123 in blocksmiths/repo be merged? \"Add new feature\"",
-        prUrl: "https://github.com/WhyAsh5114/blocksmiths/pull/2",
-        yesPool: parseEther("2.5"),
-        noPool: parseEther("1.8"),
-        resolved: false,
-        outcome: false,
-        totalParticipants: 12,
-      },
-      {
-        id: "1",
-        description: "Will PR #124 in example/repo be merged? \"Fix critical bug\"",
-        prUrl: "https://github.com/example/repo/pull/124",
-        yesPool: parseEther("0.8"),
-        noPool: parseEther("3.2"),
-        resolved: true,
-        outcome: false,
-        totalParticipants: 8,
+    const loadMarkets = async () => {
+      if (!activeMarketIds || !Array.isArray(activeMarketIds) || activeMarketIds.length === 0) {
+        setMarkets([]);
+        return;
       }
-    ]);
-  }, []);
+
+      // For each active market ID, we need to get the market details
+      // Since we can't reverse the keccak256 hash easily, we'll try known repos/PRs
+      const knownMarkets = [
+        { repository: "WhyAsh5114/blocksmiths", prNumber: 1 },
+        { repository: "WhyAsh5114/blocksmiths", prNumber: 2 },
+        { repository: "vercel/next.js", prNumber: 123 },
+        { repository: "facebook/react", prNumber: 456 },
+        { repository: "microsoft/vscode", prNumber: 789 },
+      ];
+
+      const marketPromises = knownMarkets.map(async ({ repository, prNumber }) => {
+        try {
+          const marketData = await readContract(config, {
+            address: PREDICTION_MARKET_ADDRESS,
+            abi: predictionMarketAbi,
+            functionName: "getMarket",
+            args: [repository, BigInt(prNumber)],
+          });
+
+          if (marketData && marketData[0]) { // isActive
+            const marketId = await readContract(config, {
+              address: PREDICTION_MARKET_ADDRESS,
+              abi: predictionMarketAbi,
+              functionName: "getMarketId",
+              args: [repository, BigInt(prNumber)],
+            });
+
+            return {
+              id: marketId as string,
+              repository,
+              prNumber: prNumber,
+              description: `Will PR #${prNumber} in ${repository} be merged?`,
+              yesPool: marketData[1] as bigint,
+              noPool: marketData[2] as bigint,
+              totalYesTokens: marketData[3] as bigint,
+              totalNoTokens: marketData[4] as bigint,
+              resolved: marketData[5] as boolean,
+              outcome: marketData[6] as boolean,
+              createdAt: Number(marketData[7]),
+              resolvedAt: Number(marketData[8]),
+              totalParticipants: 0, // Calculate from contract data if available
+              prUrl: `https://github.com/${repository}/pull/${prNumber}`,
+            };
+          }
+        } catch (error) {
+          // Market doesn't exist for this repo/PR combination
+          return null;
+        }
+      });
+
+      const loadedMarkets = (await Promise.all(marketPromises)).filter(Boolean) as PredictionMarket[];
+      setMarkets(loadedMarkets);
+    };
+
+    loadMarkets();
+  }, [activeMarketIds, config]);
 
   if (!isConnected) {
     return (
@@ -236,7 +284,7 @@ export default function PredictionMarketManager() {
                 </div>
                 {prError && (
                   <Alert className="mt-2">
-                    <AlertDescription className="text-red-600">{prError}</AlertDescription>
+                    <AlertDescription className="text-destructive">{prError}</AlertDescription>
                   </Alert>
                 )}
               </div>
@@ -251,17 +299,17 @@ export default function PredictionMarketManager() {
                         key={pr.number}
                         className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                           selectedPR?.number === pr.number
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
+                            ? "border-primary bg-primary/10 dark:bg-primary/20"
+                            : "border-border hover:border-muted-foreground/30"
                         }`}
                         onClick={() => setSelectedPR(pr)}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <GitPullRequest className="w-5 h-5 text-green-600" />
+                            <GitPullRequest className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                             <div>
                               <p className="font-medium">#{pr.number}: {pr.title}</p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-muted-foreground">
                                 by {pr.user.login} • {new Date(pr.created_at).toLocaleDateString()}
                               </p>
                             </div>
@@ -269,7 +317,7 @@ export default function PredictionMarketManager() {
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline">Open</Badge>
                             <ExternalLink 
-                              className="w-4 h-4 text-gray-400 hover:text-blue-600"
+                              className="w-4 h-4 text-muted-foreground hover:text-primary"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(pr.html_url, '_blank');
@@ -287,15 +335,15 @@ export default function PredictionMarketManager() {
               {selectedPR && (
                 <div className="space-y-4">
                   <Separator />
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
                     <h4 className="font-semibold mb-2">Market Preview:</h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       <strong>Question:</strong> Will PR #{selectedPR.number} in {selectedPR.repository} be merged?
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       <strong>Title:</strong> "{selectedPR.title}"
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       <strong>Mechanics:</strong> YES voters win if merged, NO voters win if closed without merging
                     </p>
                   </div>
@@ -320,12 +368,24 @@ export default function PredictionMarketManager() {
               <CardDescription>Manage existing prediction markets and resolve outcomes</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {markets.map((market) => (
+              {markets.length === 0 ? (
+                <div className="text-center py-8">
+                  <GitPullRequest className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Prediction Markets Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first prediction market by selecting a GitHub repository and PR above.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Markets will appear here once they're created on the blockchain.
+                  </p>
+                </div>
+              ) : (
+                markets.map((market) => (
                 <div key={market.id} className="border rounded-lg p-6 space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-2 flex-1">
                       <h3 className="font-semibold">{market.description}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4" />
                           <span>{market.totalParticipants} participants</span>
@@ -338,7 +398,7 @@ export default function PredictionMarketManager() {
                           href={market.prUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center space-x-1 text-blue-600 hover:underline"
+                          className="flex items-center space-x-1 text-primary hover:underline"
                         >
                           <ExternalLink className="w-4 h-4" />
                           <span>View PR</span>
@@ -353,12 +413,12 @@ export default function PredictionMarketManager() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-green-600">YES Pool (Will Merge)</span>
+                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">YES Pool (Will Merge)</span>
                         <span className="text-sm">{formatEther(market.yesPool)} ETH</span>
                       </div>
-                      <div className="bg-green-100 h-3 rounded">
+                      <div className="bg-emerald-100 dark:bg-emerald-900/20 h-3 rounded">
                         <div 
-                          className="bg-green-600 h-3 rounded"
+                          className="bg-emerald-600 dark:bg-emerald-400 h-3 rounded"
                           style={{
                             width: `${Number(market.yesPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
                           }}
@@ -368,12 +428,12 @@ export default function PredictionMarketManager() {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-red-600">NO Pool (Will Close)</span>
+                        <span className="text-sm font-medium text-rose-600 dark:text-rose-400">NO Pool (Will Close)</span>
                         <span className="text-sm">{formatEther(market.noPool)} ETH</span>
                       </div>
-                      <div className="bg-red-100 h-3 rounded">
+                      <div className="bg-rose-100 dark:bg-rose-900/20 h-3 rounded">
                         <div 
-                          className="bg-red-600 h-3 rounded"
+                          className="bg-rose-600 dark:bg-rose-400 h-3 rounded"
                           style={{
                             width: `${Number(market.noPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
                           }}
@@ -396,9 +456,9 @@ export default function PredictionMarketManager() {
                         </Button>
                         <Button
                           onClick={() => {
-                            // For demo - in reality extract from market data
-                            const repo = "blocksmiths/example";
-                            const prNumber = parseInt(market.id) + 123;
+                            // Extract repository and PR number from market data
+                            const repo = market.repository;
+                            const prNumber = market.prNumber;
                             resolveMarket({
                               address: PREDICTION_MARKET_ADDRESS,
                               abi: predictionMarketAbi,
@@ -409,15 +469,15 @@ export default function PredictionMarketManager() {
                           disabled={isResolvingMarket}
                           variant="outline"
                           size="sm"
-                          className="text-green-600"
+                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
                         >
                           Force Resolve YES
                         </Button>
                         <Button
                           onClick={() => {
-                            // For demo - in reality extract from market data
-                            const repo = "blocksmiths/example";
-                            const prNumber = parseInt(market.id) + 123;
+                            // Extract repository and PR number from market data
+                            const repo = market.repository;
+                            const prNumber = market.prNumber;
                             resolveMarket({
                               address: PREDICTION_MARKET_ADDRESS,
                               abi: predictionMarketAbi,
@@ -428,7 +488,7 @@ export default function PredictionMarketManager() {
                           disabled={isResolvingMarket}
                           variant="outline"
                           size="sm"
-                          className="text-red-600"
+                          className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
                         >
                           Force Resolve NO
                         </Button>
@@ -441,18 +501,13 @@ export default function PredictionMarketManager() {
                       <Badge variant={market.outcome ? "default" : "destructive"}>
                         Outcome: {market.outcome ? "YES - PR Merged" : "NO - PR Closed"}
                       </Badge>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         {market.outcome ? "YES" : "NO"} voters won {formatEther(market.yesPool + market.noPool)} ETH
                       </span>
                     </div>
                   )}
                 </div>
-              ))}
-
-              {markets.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No prediction markets created yet. Create your first market in the "Create Market" tab!
-                </div>
+              ))
               )}
             </CardContent>
           </Card>
@@ -466,7 +521,7 @@ export default function PredictionMarketManager() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{markets.length}</div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {markets.filter(m => !m.resolved).length} active, {markets.filter(m => m.resolved).length} resolved
                 </p>
               </CardContent>
@@ -480,7 +535,7 @@ export default function PredictionMarketManager() {
                 <div className="text-2xl font-bold">
                   {formatEther(markets.reduce((sum, m) => sum + m.yesPool + m.noPool, BigInt(0)))} ETH
                 </div>
-                <p className="text-xs text-gray-500">Across all markets</p>
+                <p className="text-xs text-muted-foreground">Across all markets</p>
               </CardContent>
             </Card>
 
@@ -492,7 +547,7 @@ export default function PredictionMarketManager() {
                 <div className="text-2xl font-bold">
                   {markets.reduce((sum, m) => sum + m.totalParticipants, 0)}
                 </div>
-                <p className="text-xs text-gray-500">Total unique participants</p>
+                <p className="text-xs text-muted-foreground">Total unique participants</p>
               </CardContent>
             </Card>
           </div>
@@ -508,7 +563,7 @@ export default function PredictionMarketManager() {
                   <div key={market.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium text-sm">Market #{market.id}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {market.description.substring(0, 60)}...
                       </p>
                     </div>
@@ -516,7 +571,7 @@ export default function PredictionMarketManager() {
                       <Badge variant={market.outcome ? "default" : "destructive"}>
                         {market.outcome ? "YES Won" : "NO Won"}
                       </Badge>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {formatEther(market.yesPool + market.noPool)} ETH
                       </p>
                     </div>
@@ -524,7 +579,7 @@ export default function PredictionMarketManager() {
                 ))}
                 
                 {markets.filter(m => m.resolved).length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     No resolved markets yet. Create and resolve some markets to see analytics.
                   </div>
                 )}

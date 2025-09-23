@@ -46,7 +46,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">GitHub PR Trading Platform</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-muted-foreground mt-2">
             Trade tokens with bonding curves + creator rewards, or bet on PR outcomes with prediction markets
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function DashboardPage() {
                 <div className="text-2xl font-bold">
                   {balance ? `${formatEther(balance.value).substring(0, 6)} ETH` : "0 ETH"}
                 </div>
-                <p className="text-xs text-gray-500">Available for trading</p>
+                <p className="text-xs text-muted-foreground">Available for trading</p>
               </CardContent>
             </Card>
 
@@ -84,7 +84,7 @@ export default function DashboardPage() {
                 <div className="text-2xl font-bold">
                   {(Array.isArray(allProjects) ? allProjects.length : 0) + (Array.isArray(activeMarkets) ? activeMarkets.length : 0)}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {Array.isArray(allProjects) ? allProjects.length : 0} token + {Array.isArray(activeMarkets) ? activeMarkets.length : 0} prediction
                 </p>
               </CardContent>
@@ -96,7 +96,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">$2,847</div>
-                <p className="text-xs text-gray-500">10% of minting fees</p>
+                <p className="text-xs text-muted-foreground">10% of minting fees</p>
               </CardContent>
             </Card>
 
@@ -106,7 +106,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">15.7 ETH</div>
-                <p className="text-xs text-gray-500">Winner takes all</p>
+                <p className="text-xs text-muted-foreground">Winner takes all</p>
               </CardContent>
             </Card>
           </div>
@@ -119,8 +119,8 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-green-600 mb-2">🪙 Token Trading System</h3>
-                  <ul className="text-sm space-y-1 text-gray-600">
+                  <h3 className="font-semibold text-emerald-600 dark:text-emerald-400 mb-2">🪙 Token Trading System</h3>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
                     <li>• Bonding curve pricing (price increases with supply)</li>
                     <li>• Redeem tokens anytime for ETH</li>
                     <li>• Creators earn 10% of all minting fees</li>
@@ -129,8 +129,8 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-red-600 mb-2">🎯 Prediction Markets</h3>
-                  <ul className="text-sm space-y-1 text-gray-600">
+                  <h3 className="font-semibold text-rose-600 dark:text-rose-400 mb-2">🎯 Prediction Markets</h3>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
                     <li>• YES/NO betting on PR outcomes</li>
                     <li>• Winners take ALL losers' money</li>
                     <li>• If PR closes, NO voters gain everything</li>
@@ -148,10 +148,10 @@ export default function DashboardPage() {
               <CardContent className="space-y-3">
                 {isConnected ? (
                   <>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                       <div>
                         <p className="font-medium text-sm">Connected</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {address?.substring(0, 6)}...{address?.substring(address.length - 4)}
                         </p>
                       </div>
@@ -164,10 +164,10 @@ export default function DashboardPage() {
                     </div>
 
                     {hasRegisteredTokens && (
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-primary/10 dark:bg-primary/20 rounded-lg">
                         <div>
                           <p className="font-medium text-sm">Token Markets Available</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {Array.isArray(allProjects) ? allProjects.length : 0} registered projects
                           </p>
                         </div>
@@ -177,10 +177,10 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                       <div>
                         <p className="font-medium text-sm">Prediction Markets</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {Array.isArray(activeMarkets) ? activeMarkets.length : 0} active markets
                         </p>
                       </div>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <p>Connect your wallet to see activity</p>
                   </div>
                 )}
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Creator Rewards Paid</span>
-                    <span className="font-medium text-green-600">$2,847</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">$2,847</span>
                   </div>
                 </div>
               </CardContent>
@@ -261,7 +261,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Largest Win</span>
-                    <span className="font-medium text-green-600">8.7 ETH</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">8.7 ETH</span>
                   </div>
                 </div>
               </CardContent>

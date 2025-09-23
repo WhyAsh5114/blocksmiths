@@ -81,7 +81,7 @@ export function WalletConnect() {
           className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border-green-500/20 hover:from-green-500/20 hover:to-blue-500/20"
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <div className="w-2 h-2 bg-emerald-500 dark:bg-emerald-400 rounded-full animate-pulse" />
             <span>{formatAddress(address!)}</span>
             {chain && (
               <Badge variant="outline" className="text-xs">
@@ -117,7 +117,7 @@ export function WalletConnect() {
         
         <DropdownMenuItem 
           onClick={() => disconnect()} 
-          className="cursor-pointer text-red-400 focus:text-red-400"
+          className="cursor-pointer text-destructive focus:text-destructive"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Disconnect

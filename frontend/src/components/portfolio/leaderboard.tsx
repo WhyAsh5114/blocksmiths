@@ -31,7 +31,7 @@ export function Leaderboard() {
       case 1:
         return <Trophy className="w-5 h-5 text-yellow-400" />;
       case 2:
-        return <Medal className="w-5 h-5 text-gray-400" />;
+        return <Medal className="w-5 h-5 text-muted-foreground" />;
       case 3:
         return <Award className="w-5 h-5 text-amber-600" />;
       default:
@@ -44,7 +44,7 @@ export function Leaderboard() {
       case 1:
         return 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30';
       case 2:
-        return 'bg-gray-400/20 text-gray-400 border-gray-400/30';
+        return 'bg-muted/50 text-muted-foreground border-muted';
       case 3:
         return 'bg-amber-600/20 text-amber-600 border-amber-600/30';
       default:
@@ -153,7 +153,7 @@ export function Leaderboard() {
                 {/* Stats */}
                 <div className="text-right space-y-1">
                   <div className="font-bold flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
+                    <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     {entry.totalValue.toFixed(2)} ETH
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -190,8 +190,8 @@ export function Leaderboard() {
         )}
 
         {leaderboard.length > 0 && (
-          <div className="mt-4 p-3 bg-blue-400/5 border border-blue-400/20 rounded-lg">
-            <div className="text-sm text-blue-400 font-medium mb-1">💡 Pro Tip</div>
+          <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="text-sm text-primary font-medium mb-1">💡 Pro Tip</div>
             <div className="text-sm text-muted-foreground">
               Success rate is calculated based on resolved markets. Focus on quality over quantity!
             </div>

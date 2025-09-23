@@ -1,0 +1,26 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "projectCoinFactory": "0x9d1081bc221abd24f64126186d8f2acdad923899",
+  "predictionMarket": "0x1daf19bd57399970d5836e84d3a967a7a2ca19ee",
+  "deployer": "0x499e6c92a6a88620a060691e54a567c3482dd530",
+  "timestamp": "2025-09-23T12:54:59.703Z",
+  "createdTokens": [
+    {
+      "name": "Blocksmiths Token",
+      "symbol": "BLOCKS",
+      "githubOwner": "WhyAsh5114",
+      "githubRepo": "blocksmiths",
+      "tokenAddress": "0x01708F205BF9c7dAe4856aD9Cc35668B0fe3412E",
+      "transactionHash": "0x24f0063abfa486765548401cc80e4e69c3bbb6956cd13b6e6a81226aa4d13a8e"
+    },
+    {
+      "name": "MyFit Token",
+      "symbol": "MYFIT",
+      "githubOwner": "WhyAsh5114",
+      "githubRepo": "MyFit",
+      "tokenAddress": "0xfE4A3eA470EC6ceE43846dA58E9BFF8f086CA9c1",
+      "transactionHash": "0x3d3f944963423ff77e5d03aa9929a831ece6959908592fe3b95fe8f97bcb0bfb"
+    }
+  ]
+}

@@ -92,13 +92,13 @@ export default function PortfolioPage() {
           <p className="text-muted-foreground">Manage your token investments</p>
         </div>
 
-        <Card className="border-red-200">
+        <Card className="border-destructive/50">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 text-red-600">
+            <div className="flex items-center gap-3 text-destructive">
               <AlertCircle className="w-5 h-5" />
               <div>
                 <h3 className="font-semibold">Error Loading Portfolio</h3>
-                <p className="text-sm text-red-500">{error}</p>
+                <p className="text-sm text-destructive/80">{error}</p>
               </div>
             </div>
           </CardContent>
@@ -278,9 +278,9 @@ function PortfolioCard({ holding, onRedeem, isTransacting }: PortfolioCardProps)
                 <Badge 
                   variant="outline" 
                   className={`text-xs ${
-                    holding.prStatus === 'merged' ? 'text-green-600 border-green-600' :
-                    holding.prStatus === 'closed' ? 'text-red-600 border-red-600' :
-                    'text-blue-600 border-blue-600'
+                    holding.prStatus === 'merged' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400' :
+                    holding.prStatus === 'closed' ? 'text-rose-600 dark:text-rose-400 border-rose-600 dark:border-rose-400' :
+                    'text-primary border-primary'
                   }`}
                 >
                   {holding.prStatus}
@@ -338,7 +338,7 @@ function PortfolioCard({ holding, onRedeem, isTransacting }: PortfolioCardProps)
             {redemptionInfo.rewardMultiplier !== 1.0 && (
               <div className="text-xs">
                 <span className={`font-medium ${
-                  redemptionInfo.rewardMultiplier > 1 ? 'text-green-600' : 'text-red-600'
+                  redemptionInfo.rewardMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                 }`}>
                   {redemptionInfo.rewardMultiplier > 1 ? '+' : ''}{((redemptionInfo.rewardMultiplier - 1) * 100).toFixed(0)}% 
                   {redemptionInfo.rewardMultiplier > 1 ? ' bonus' : ' reduction'} 

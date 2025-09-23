@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useConfig } from 'wagmi';
 import { useProjectCoinFactory } from './web3/useProjectCoin';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { projectCoinAbi } from '@/lib/wagmi-generated';
 import { parseEther, formatEther } from 'viem';
+import { readContract } from '@wagmi/core';
 import PRStatusService from '@/lib/prStatusService';
 
 export interface PortfolioHolding {
@@ -27,6 +28,7 @@ export interface PortfolioHolding {
 
 export function useUserPortfolio() {
   const { address, isConnected } = useAccount();
+  const config = useConfig();
   const [portfolio, setPortfolio] = useState<PortfolioHolding[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,19 +53,57 @@ export function useUserPortfolio() {
     setError(null);
 
     try {
-      // TODO: Implement real portfolio data from blockchain
-      // For now, return empty portfolio until we implement:
-      // 1. Read user's token balances from contract events
-      // 2. Calculate investment amounts from purchase history
-      // 3. Get current token values and PR statuses
-      setPortfolio([]);
+      // Get user's portfolio by checking balances in all registered project coins
+      const portfolioPromises = projectCoinFactory.allProjects.map(async (project) => {
+        try {
+          // Get user's balance for this token using readContract
+          const balance = await readContract(config, {
+            address: project.tokenAddress as `0x${string}`,
+            abi: projectCoinAbi,
+            functionName: "balanceOf",
+            args: [address],
+          });
+
+          // Only include tokens where user has a balance
+          if (balance && balance > 0n) {
+            const balanceInEther = parseFloat(formatEther(balance));
+            const repository = `${project.githubOwner}/${project.githubRepo}`;
+            
+            // Estimate invested amount (this would ideally come from transaction history)
+            const estimatedTokenPrice = 0.001; // Base estimate
+            const totalInvested = balanceInEther * estimatedTokenPrice;
+            
+            return {
+              tokenAddress: project.tokenAddress,
+              repository,
+              name: project.name,
+              symbol: project.symbol,
+              balance: balanceInEther,
+              totalInvested,
+              estimatedValue: totalInvested, // For now, assume no price change
+              prStatus: 'open' as const,
+              prNumber: undefined, // Would need to be determined from project data
+            } as PortfolioHolding;
+          }
+          
+          return null;
+        } catch (error) {
+          console.warn(`Failed to check balance for ${project.name}:`, error);
+          return null;
+        }
+      });
+
+      const portfolioResults = await Promise.all(portfolioPromises);
+      const validHoldings = portfolioResults.filter(Boolean) as PortfolioHolding[];
+      
+      setPortfolio(validHoldings);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load portfolio');
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, config, projectCoinFactory.allProjects]);
 
   // Load portfolio and check PR statuses
   useEffect(() => {

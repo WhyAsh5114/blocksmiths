@@ -50,6 +50,25 @@ export function PortfolioAnalytics() {
 
     const totalTokens = holdings.reduce((sum, h) => sum + h.balance, 0);
 
+    // Calculate average holding time from project creation dates
+    let averageHoldingTime = 0;
+    if (holdings.length > 0 && allProjects) {
+      const currentTime = Date.now() / 1000; // Current time in seconds
+      const holdingTimes = holdings.map(holding => {
+        const project = allProjects.find(p => p.tokenAddress === holding.tokenAddress);
+        if (project && project.createdAt) {
+          const createdAtSeconds = Number(project.createdAt);
+          return currentTime - createdAtSeconds;
+        }
+        return 0;
+      }).filter(time => time > 0);
+      
+      if (holdingTimes.length > 0) {
+        averageHoldingTime = holdingTimes.reduce((sum, time) => sum + time, 0) / holdingTimes.length;
+        averageHoldingTime = averageHoldingTime / (24 * 60 * 60); // Convert to days
+      }
+    }
+
     setAnalytics({
       totalValue,
       totalInvested,
@@ -58,7 +77,7 @@ export function PortfolioAnalytics() {
       bestPerformer: bestPerformer || null,
       worstPerformer: worstPerformer || null,
       totalTokens,
-      averageHoldingTime: 0, // TODO: Calculate from creation dates
+      averageHoldingTime,
       successRate
     });
   };
@@ -124,16 +143,16 @@ export function PortfolioAnalytics() {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {analytics.gainLoss >= 0 ? (
-                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-4 h-4 text-red-400" />
+                  <TrendingDown className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                 )}
                 P&L
               </div>
-              <div className={`text-2xl font-bold ${analytics.gainLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`text-2xl font-bold ${analytics.gainLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                 {analytics.gainLoss >= 0 ? '+' : ''}{analytics.gainLoss.toFixed(4)} ETH
               </div>
-              <div className={`text-sm ${analytics.gainLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`text-sm ${analytics.gainLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                 {analytics.gainLossPercent >= 0 ? '+' : ''}{analytics.gainLossPercent.toFixed(2)}%
               </div>
             </div>
@@ -172,14 +191,14 @@ export function PortfolioAnalytics() {
       {/* Performance Highlights */}
       {analytics.bestPerformer && analytics.worstPerformer && (
         <div className="grid md:grid-cols-2 gap-4">
-          <Card className="game-card border-green-400/30">
+          <Card className="game-card border-emerald-400/30 dark:border-emerald-600/30">
             <CardHeader>
-              <CardTitle className="text-green-400 text-lg">🏆 Best Performer</CardTitle>
+              <CardTitle className="text-emerald-500 dark:text-emerald-400 text-lg">🏆 Best Performer</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="font-semibold">{analytics.bestPerformer.repository}</div>
-                <div className="text-green-400 font-bold">
+                <div className="text-emerald-500 dark:text-emerald-400 font-bold">
                   +{((analytics.bestPerformer.estimatedValue - analytics.bestPerformer.totalInvested) / analytics.bestPerformer.totalInvested * 100).toFixed(2)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -189,14 +208,14 @@ export function PortfolioAnalytics() {
             </CardContent>
           </Card>
 
-          <Card className="game-card border-red-400/30">
+          <Card className="game-card border-rose-400/30 dark:border-rose-600/30">
             <CardHeader>
-              <CardTitle className="text-red-400 text-lg">📉 Needs Attention</CardTitle>
+              <CardTitle className="text-rose-500 dark:text-rose-400 text-lg">📉 Needs Attention</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="font-semibold">{analytics.worstPerformer.repository}</div>
-                <div className="text-red-400 font-bold">
+                <div className="text-rose-500 dark:text-rose-400 font-bold">
                   {((analytics.worstPerformer.estimatedValue - analytics.worstPerformer.totalInvested) / analytics.worstPerformer.totalInvested * 100).toFixed(2)}%
                 </div>
                 <div className="text-sm text-muted-foreground">

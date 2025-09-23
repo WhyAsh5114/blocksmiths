@@ -84,12 +84,12 @@ export default function LandingPage() {
           <Card className="group hover:shadow-lg transition-all duration-300 border-blue-500/10 bg-gradient-to-br from-background to-blue-500/5">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active Traders</CardTitle>
-              <Users className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
+              <Users className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">8,429</div>
               <p className="text-xs text-muted-foreground flex items-center mt-1">
-                <Users className="h-3 w-3 mr-1 text-blue-500" />
+                <Users className="h-3 w-3 mr-1 text-primary" />
                 Active this month
               </p>
             </CardContent>

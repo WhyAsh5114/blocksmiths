@@ -123,7 +123,7 @@ export default function TokenTrading() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{balance ? formatEther(balance.value).substring(0, 6) : "0"} ETH</div>
-            <p className="text-xs text-gray-500">Available for trading</p>
+            <p className="text-xs text-muted-foreground">Available for trading</p>
           </CardContent>
         </Card>
 
@@ -133,7 +133,7 @@ export default function TokenTrading() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{realTokenMarkets.length}</div>
-            <p className="text-xs text-gray-500">Markets available</p>
+            <p className="text-xs text-muted-foreground">Markets available</p>
           </CardContent>
         </Card>
 
@@ -145,7 +145,7 @@ export default function TokenTrading() {
             <div className="text-2xl font-bold">
               ${realTokenMarkets.reduce((sum, t) => sum + t.marketCap, 0).toFixed(0)}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Total value locked
             </p>
           </CardContent>
@@ -161,7 +161,7 @@ export default function TokenTrading() {
                 ? formatEther(realTokenMarkets.reduce((sum, t) => sum + t.creatorRewards, BigInt(0))).substring(0, 4) 
                 : "0"} ETH
             </div>
-            <p className="text-xs text-gray-500">10% of minting fees</p>
+            <p className="text-xs text-muted-foreground">10% of minting fees</p>
           </CardContent>
         </Card>
       </div>
@@ -182,7 +182,7 @@ export default function TokenTrading() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-gray-400" />
+                <Search className="w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search repositories or tokens..."
                   value={searchQuery}
@@ -197,8 +197,8 @@ export default function TokenTrading() {
                     key={token.tokenAddress}
                     className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                       selectedToken === token.tokenAddress
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
                     }`}
                     onClick={() => setSelectedToken(token.tokenAddress)}
                   >
@@ -208,8 +208,8 @@ export default function TokenTrading() {
                           <h3 className="font-semibold">{token.name}</h3>
                           <Badge variant="outline">{token.symbol}</Badge>
                         </div>
-                        <p className="text-sm text-gray-500">{token.repository}</p>
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <p className="text-sm text-muted-foreground">{token.repository}</p>
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                           <span className="flex items-center">
                             <Users className="w-3 h-3 mr-1" />
                             {token.prCount} PRs
@@ -222,9 +222,9 @@ export default function TokenTrading() {
                       </div>
                       <div className="text-right">
                         <p className="font-medium">{formatEther(token.currentPrice)} ETH</p>
-                        <p className="text-sm text-gray-500">per token</p>
+                        <p className="text-sm text-muted-foreground">per token</p>
                         <div className="flex items-center space-x-1 mt-1">
-                          <span className="text-xs text-gray-500">Market Cap: ${token.marketCap.toFixed(0)}</span>
+                          <span className="text-xs text-muted-foreground">Market Cap: ${token.marketCap.toFixed(0)}</span>
                         </div>
                       </div>
                     </div>
@@ -253,7 +253,7 @@ export default function TokenTrading() {
                     <TrendingUp className="w-4 h-4 mr-2" />
                     Buy Tokens
                   </Button>
-                  <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
                   <Button
                     variant={tradeType === "sell" ? "default" : "outline"}
                     onClick={() => setTradeType("sell")}
@@ -278,7 +278,7 @@ export default function TokenTrading() {
                   </div>
 
                       {tradeAmount && (
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm">
                               {tradeType === "buy" ? "Cost:" : "You'll receive:"}
@@ -298,7 +298,7 @@ export default function TokenTrading() {
                                   {(parseFloat(calculateMintCost(realTokenMarkets.find(t => t.tokenAddress === selectedToken)!, tradeAmount)) * 0.1).toFixed(6)} ETH
                                 </span>
                               </div>
-                              <div className="flex justify-between text-sm text-gray-500">
+                              <div className="flex justify-between text-sm text-muted-foreground">
                                 <span>Current price per token:</span>
                                 <span>{formatEther(realTokenMarkets.find(t => t.tokenAddress === selectedToken)!.currentPrice)} ETH</span>
                               </div>
@@ -330,20 +330,20 @@ export default function TokenTrading() {
             <CardContent>
               <div className="space-y-4">
                 {realTokenMarkets.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Coins className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Coins className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>No tokens available yet.</p>
                     <p className="text-sm mt-1">Create some tokens to start trading.</p>
                   </div>
                 ) : hasRegisteredTokens ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Coins className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Coins className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>Connect your wallet to see token balances.</p>
                     <p className="text-sm mt-1">Your holdings will appear here once you buy tokens.</p>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Coins className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Coins className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>No token holdings found.</p>
                     <p className="text-sm mt-1">Buy some tokens to see your portfolio here.</p>
                   </div>
@@ -372,7 +372,7 @@ export default function TokenTrading() {
                   <div key={repo} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{repo}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {repo === "WhyAsh5114/blocksmiths" ? "Current repository" : "Popular project"}
                       </p>
                     </div>
@@ -388,8 +388,8 @@ export default function TokenTrading() {
               </div>
 
               {tokenCreated && (
-                <Alert className="border-green-200 bg-green-50">
-                  <AlertDescription className="text-green-700">
+                <Alert className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20">
+                  <AlertDescription className="text-emerald-700 dark:text-emerald-300">
                     🎉 Token created successfully! You can now start trading.
                   </AlertDescription>
                 </Alert>

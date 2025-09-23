@@ -103,7 +103,7 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                 </Badge>
               )}
               {market.hasToken && (
-                <Badge className="bg-green-500/20 text-green-400 border-green-400/50 text-xs">
+                <Badge className="bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border-emerald-500/50 text-xs">
                   <Coins className="w-3 h-3 mr-1" />
                   Token Available
                 </Badge>
@@ -183,12 +183,12 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                   </Button>
                 </div>
                 {mintError && (
-                  <div className="text-sm text-red-400">
+                  <div className="text-sm text-destructive">
                     {mintError}
                   </div>
                 )}
                 {showSuccess && (
-                  <div className="text-sm text-green-400">
+                  <div className="text-sm text-emerald-600 dark:text-emerald-400">
                     Tokens minted successfully!
                   </div>
                 )}
@@ -232,22 +232,22 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
 
           {/* Transaction Status */}
           {projectCoin.isPending && (
-            <div className="text-center text-sm text-yellow-400">
+            <div className="text-center text-sm text-amber-500 dark:text-amber-400">
               Transaction pending...
             </div>
           )}
           {projectCoin.isConfirming && (
-            <div className="text-center text-sm text-blue-400">
+            <div className="text-center text-sm text-primary">
               Confirming transaction...
             </div>
           )}
           {showSuccess && (
-            <div className="text-center text-sm text-green-400">
+            <div className="text-center text-sm text-emerald-600 dark:text-emerald-400">
               Tokens minted successfully! Total supply updated.
             </div>
           )}
           {projectCoin.writeError && (
-            <div className="text-center text-sm text-red-400">
+            <div className="text-center text-sm text-destructive">
               Transaction failed: {projectCoin.writeError}
             </div>
           )}

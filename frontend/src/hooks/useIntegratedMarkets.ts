@@ -83,9 +83,9 @@ export function useIntegratedMarkets() {
                 ...market,
                 hasToken: true,
                 tokenAddress: project.tokenAddress,
-                totalSupply: '1000000', // TODO: Fetch from contract
-                mintCost: '0.001', // TODO: Fetch from contract
-                marketCap: parseFloat('1000000') * market.price,
+                totalSupply: '0', // Will be loaded by individual components when needed
+                mintCost: '0', // Will be loaded by individual components when needed
+                marketCap: 0, // Will be calculated when totalSupply is loaded
               }));
             } else {
               // Create a placeholder market for tokens without active PRs

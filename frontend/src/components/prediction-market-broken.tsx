@@ -187,7 +187,7 @@ export default function PredictionMarket() {
     };
 
     loadMarkets();
-  }, [isConnected, activeMarketsData, address, config]);
+  }, [isConnected, activeMarketsData, address]);
 
   const handleCreateMarket = () => {
     if (!newMarketDescription.trim()) return;
@@ -290,7 +290,7 @@ export default function PredictionMarket() {
             <Label htmlFor="description">Market Description</Label>
             <Input
               id="description"
-              placeholder="Will PR #123 in owner/repo be merged?"
+              placeholder="Will PR #123 in repo XYZ be merged?"
               value={newMarketDescription}
               onChange={(e) => setNewMarketDescription(e.target.value)}
             />
@@ -317,169 +317,172 @@ export default function PredictionMarket() {
             
             return (
               <div key={market.id} className="border rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">{market.description}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Created: {new Date(market.createdAt * 1000).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge variant={market.resolved ? "secondary" : "default"}>
-                    {market.resolved ? "Resolved" : "Active"}
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">{market.description}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Created: {new Date(market.createdAt * 1000).toLocaleDateString()}
+                  </p>
                 </div>
+                <Badge variant={market.resolved ? "secondary" : "default"}>
+                  {market.resolved ? "Resolved" : "Active"}
+                </Badge>
+              </div>
 
-                {/* User Position Display */}
-                {userPosition && (userPosition.yesTokens > 0n || userPosition.noTokens > 0n) && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <h4 className="text-sm font-medium mb-2">Your Position:</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {userPosition.yesTokens > 0n && (
-                        <div className="text-emerald-600 dark:text-emerald-400">
-                          YES: {userPosition.yesTokens.toString()} tokens
-                        </div>
-                      )}
-                      {userPosition.noTokens > 0n && (
-                        <div className="text-rose-600 dark:text-rose-400">
-                          NO: {userPosition.noTokens.toString()} tokens
-                        </div>
-                      )}
-                    </div>
-                    {market.resolved && !userPosition.hasClaimed && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Click "Claim Winnings" below to collect your rewards
-                      </p>
+              {/* User Position Display */}
+              {userPosition && (userPosition.yesTokens > 0n || userPosition.noTokens > 0n) && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium mb-2">Your Position:</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {userPosition.yesTokens > 0n && (
+                      <div className="text-emerald-600 dark:text-emerald-400">
+                        YES: {userPosition.yesTokens.toString()} tokens
+                      </div>
+                    )}
+                    {userPosition.noTokens > 0n && (
+                      <div className="text-rose-600 dark:text-rose-400">
+                        NO: {userPosition.noTokens.toString()} tokens
+                      </div>
                     )}
                   </div>
-                )}
+                  {market.resolved && !userPosition.hasClaimed && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click "Claim Winnings" below to collect your rewards
+                    </p>
+                  )}
+                </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">YES Pool</span>
-                      <span className="text-sm">{formatEther(market.yesPool)} ETH</span>
-                    </div>
-                    <div className="bg-emerald-100 dark:bg-emerald-900/30 h-2 rounded">
-                      <div 
-                        className="bg-emerald-600 dark:bg-emerald-400 h-2 rounded"
-                        style={{
-                          width: `${Number(market.yesPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
-                        }}
-                      />
-                    </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">YES Pool</span>
+                    <span className="text-sm">{formatEther(market.yesPool)} ETH</span>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-rose-600 dark:text-rose-400">NO Pool</span>
-                      <span className="text-sm">{formatEther(market.noPool)} ETH</span>
-                    </div>
-                    <div className="bg-rose-100 dark:bg-rose-900/30 h-2 rounded">
-                      <div 
-                        className="bg-rose-600 dark:bg-rose-400 h-2 rounded"
-                        style={{
-                          width: `${Number(market.noPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
-                        }}
-                      />
-                    </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-900/30 h-2 rounded">
+                    <div 
+                      className="bg-emerald-600 dark:bg-emerald-400 h-2 rounded"
+                      style={{
+                        width: `${Number(market.yesPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
+                      }}
+                    />
                   </div>
                 </div>
 
-                {!market.resolved && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`amount-${market.id}`}>Bet Amount (ETH)</Label>
-                          <Input
-                            id={`amount-${market.id}`}
-                            placeholder="0.1"
-                            value={selectedMarket === market.id ? betAmount : ""}
-                            onChange={(e) => {
-                              setSelectedMarket(market.id);
-                              setBetAmount(e.target.value);
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Position</Label>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant={betType === "yes" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setBetType("yes")}
-                              className="flex-1"
-                            >
-                              YES
-                            </Button>
-                            <Button
-                              variant={betType === "no" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setBetType("no")}
-                              className="flex-1"
-                            >
-                              NO
-                            </Button>
-                          </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-rose-600 dark:text-rose-400">NO Pool</span>
+                    <span className="text-sm">{formatEther(market.noPool)} ETH</span>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 h-2 rounded">
+                    <div 
+                      className="bg-rose-600 dark:bg-rose-400 h-2 rounded"
+                      style={{
+                        width: `${Number(market.noPool) / (Number(market.yesPool) + Number(market.noPool)) * 100}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {!market.resolved && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`amount-${market.id}`}>Bet Amount (ETH)</Label>
+                        <Input
+                          id={`amount-${market.id}`}
+                          placeholder="0.1"
+                          value={selectedMarket === market.id ? betAmount : ""}
+                          onChange={(e) => {
+                            setSelectedMarket(market.id);
+                            setBetAmount(e.target.value);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Position</Label>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant={betType === "yes" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBetType("yes")}
+                            className="flex-1"
+                          >
+                            YES
+                          </Button>
+                          <Button
+                            variant={betType === "no" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBetType("no")}
+                            className="flex-1"
+                          >
+                            NO
+                          </Button>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={handleTakePosition}
-                          disabled={!betAmount || selectedMarket !== market.id || isTakePositionLoading}
-                          className="flex-1"
-                        >
-                          {isTakePositionLoading ? "Betting..." : `Bet ${betType.toUpperCase()}`}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleResolveMarket(market.id, true)}
-                          disabled={isResolveMarketLoading}
-                          size="sm"
-                        >
-                          Resolve YES
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleResolveMarket(market.id, false)}
-                          disabled={isResolveMarketLoading}
-                          size="sm"
-                        >
-                          Resolve NO
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {market.resolved && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Outcome:</span>
-                      <Badge variant={market.outcome ? "default" : "destructive"}>
-                        {market.outcome ? "YES - PR Merged" : "NO - PR Closed"}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Resolved: {new Date(market.resolvedAt * 1000).toLocaleDateString()}
-                    </div>
-                    {userPosition && !userPosition.hasClaimed && (
+                    <div className="flex space-x-2">
                       <Button
-                        onClick={() => handleClaimWinnings(market.id)}
-                        disabled={isClaimWinningsLoading}
+                        onClick={handleTakePosition}
+                        disabled={!betAmount || selectedMarket !== market.id || isTakePositionLoading}
+                        className="flex-1"
+                      >
+                        {isTakePositionLoading ? "Betting..." : `Bet ${betType.toUpperCase()}`}
+                      </Button>
+                      <Button
                         variant="outline"
+                        onClick={() => handleResolveMarket(market.id, true)}
+                        disabled={isResolveMarketLoading}
                         size="sm"
                       >
-                        {isClaimWinningsLoading ? "Claiming..." : "Claim Winnings"}
+                        Resolve YES
                       </Button>
-                    )}
+                      <Button
+                        variant="outline"
+                        onClick={() => handleResolveMarket(market.id, false)}
+                        disabled={isResolveMarketLoading}
+                        size="sm"
+                      >
+                        Resolve NO
+                      </Button>
+                    </div>
                   </div>
-                )}
+                </>
+              )}
+
               </div>
+              )}
+
+              {market.resolved && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Outcome:</span>
+                    <Badge variant={market.outcome ? "default" : "destructive"}>
+                      {market.outcome ? "YES - PR Merged" : "NO - PR Closed"}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Resolved: {new Date(market.resolvedAt * 1000).toLocaleDateString()}
+                  </div>
+                  {userPosition && !userPosition.hasClaimed && (
+                    <Button
+                      onClick={() => handleClaimWinnings(market.id)}
+                      disabled={isClaimWinningsLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isClaimWinningsLoading ? "Claiming..." : "Claim Winnings"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
             );
-          })}
+          })
 
           {markets.length === 0 && (
             <div className="text-center py-8">
