@@ -594,6 +594,408 @@ export const ownableAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PredictionMarket
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const predictionMarketAbi = [
+  {
+    type: 'constructor',
+    inputs: [
+      { name: '_initialOwner', internalType: 'address', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'owner', internalType: 'address', type: 'address' }],
+    name: 'OwnableInvalidOwner',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'OwnableUnauthorizedAccount',
+  },
+  { type: 'error', inputs: [], name: 'ReentrancyGuardReentrantCall' },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      {
+        name: 'repository',
+        internalType: 'string',
+        type: 'string',
+        indexed: false,
+      },
+      {
+        name: 'prNumber',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'MarketCreated',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      { name: 'outcome', internalType: 'bool', type: 'bool', indexed: false },
+      {
+        name: 'yesPool',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'noPool',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'MarketResolved',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'tokens',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'ethSpent',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'NoPositionTaken',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'previousOwner',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'newOwner',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'OwnershipTransferred',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'wasYesPosition',
+        internalType: 'bool',
+        type: 'bool',
+        indexed: false,
+      },
+    ],
+    name: 'WinningsClaimed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'tokens',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'ethSpent',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'YesPositionTaken',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'PLATFORM_FEE',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'TOKENS_PER_ETH',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    name: 'activeMarkets',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    name: 'allMarkets',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'user', internalType: 'address', type: 'address' },
+    ],
+    name: 'calculatePotentialWinnings',
+    outputs: [
+      { name: 'yesWinnings', internalType: 'uint256', type: 'uint256' },
+      { name: 'noWinnings', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'claimWinnings',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'createMarket',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'emergencyWithdraw',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getActiveMarkets',
+    outputs: [{ name: '', internalType: 'bytes32[]', type: 'bytes32[]' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getAllMarkets',
+    outputs: [{ name: '', internalType: 'bytes32[]', type: 'bytes32[]' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'getMarket',
+    outputs: [
+      { name: 'isActive', internalType: 'bool', type: 'bool' },
+      { name: 'yesPool', internalType: 'uint256', type: 'uint256' },
+      { name: 'noPool', internalType: 'uint256', type: 'uint256' },
+      { name: 'totalYesTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'totalNoTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'isResolved', internalType: 'bool', type: 'bool' },
+      { name: 'outcome', internalType: 'bool', type: 'bool' },
+      { name: 'createdAt', internalType: 'uint256', type: 'uint256' },
+      { name: 'resolvedAt', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'getMarketId',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'pure',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'user', internalType: 'address', type: 'address' },
+    ],
+    name: 'getUserPositions',
+    outputs: [
+      { name: 'yesTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'noTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'hasClaimed', internalType: 'bool', type: 'bool' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'markets',
+    outputs: [
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'isActive', internalType: 'bool', type: 'bool' },
+      { name: 'yesPool', internalType: 'uint256', type: 'uint256' },
+      { name: 'noPool', internalType: 'uint256', type: 'uint256' },
+      { name: 'totalYesTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'totalNoTokens', internalType: 'uint256', type: 'uint256' },
+      { name: 'isResolved', internalType: 'bool', type: 'bool' },
+      { name: 'outcome', internalType: 'bool', type: 'bool' },
+      { name: 'resolvedAt', internalType: 'uint256', type: 'uint256' },
+      { name: 'createdAt', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'owner',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'renounceOwnership',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'merged', internalType: 'bool', type: 'bool' },
+    ],
+    name: 'resolveMarket',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'takeNoPosition',
+    outputs: [],
+    stateMutability: 'payable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'repository', internalType: 'string', type: 'string' },
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'takeYesPosition',
+    outputs: [],
+    stateMutability: 'payable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'newOwner', internalType: 'address', type: 'address' }],
+    name: 'transferOwnership',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'bytes32', type: 'bytes32' },
+      { name: '', internalType: 'address', type: 'address' },
+    ],
+    name: 'userHasClaimed',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'bytes32', type: 'bytes32' },
+      { name: '', internalType: 'address', type: 'address' },
+    ],
+    name: 'userNoPositions',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'bytes32', type: 'bytes32' },
+      { name: '', internalType: 'address', type: 'address' },
+    ],
+    name: 'userYesPositions',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProjectCoin
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -607,6 +1009,7 @@ export const projectCoinAbi = [
       { name: '_githubRepo', internalType: 'string', type: 'string' },
       { name: '_treasury', internalType: 'address', type: 'address' },
       { name: '_rewardPool', internalType: 'address', type: 'address' },
+      { name: '_projectCreator', internalType: 'address', type: 'address' },
       { name: '_initialOwner', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
@@ -690,6 +1093,25 @@ export const projectCoinAbi = [
     anonymous: false,
     inputs: [
       {
+        name: 'creator',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'CreatorRewardDistributed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
         name: 'treasury',
         internalType: 'uint256',
         type: 'uint256',
@@ -709,6 +1131,26 @@ export const projectCoinAbi = [
       },
     ],
     name: 'FeesDistributed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'prNumber',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      { name: 'merged', internalType: 'bool', type: 'bool', indexed: false },
+      {
+        name: 'rewardMultiplier',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'MarketResolved',
   },
   {
     type: 'event',
@@ -832,6 +1274,13 @@ export const projectCoinAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'CREATOR_FEE',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'INITIAL_SUPPLY',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
@@ -923,6 +1372,18 @@ export const projectCoinAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: 'prNumber', internalType: 'uint256', type: 'uint256' }],
+    name: 'getMarketOutcome',
+    outputs: [
+      { name: 'isResolved', internalType: 'bool', type: 'bool' },
+      { name: 'prMerged', internalType: 'bool', type: 'bool' },
+      { name: 'resolvedAt', internalType: 'uint256', type: 'uint256' },
+      { name: 'rewardMultiplier', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [],
     name: 'getMintingStats',
     outputs: [
@@ -955,6 +1416,13 @@ export const projectCoinAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'getResolvedPRs',
+    outputs: [{ name: '', internalType: 'uint256[]', type: 'uint256[]' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'githubOwner',
     outputs: [{ name: '', internalType: 'string', type: 'string' }],
     stateMutability: 'view',
@@ -964,6 +1432,19 @@ export const projectCoinAbi = [
     inputs: [],
     name: 'githubRepo',
     outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    name: 'marketOutcomes',
+    outputs: [
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'isResolved', internalType: 'bool', type: 'bool' },
+      { name: 'prMerged', internalType: 'bool', type: 'bool' },
+      { name: 'resolvedAt', internalType: 'uint256', type: 'uint256' },
+      { name: 'rewardMultiplier', internalType: 'uint256', type: 'uint256' },
+    ],
     stateMutability: 'view',
   },
   {
@@ -1005,6 +1486,13 @@ export const projectCoinAbi = [
   },
   {
     type: 'function',
+    inputs: [],
+    name: 'projectCreator',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [{ name: '_amount', internalType: 'uint256', type: 'uint256' }],
     name: 'redeem',
     outputs: [],
@@ -1022,6 +1510,23 @@ export const projectCoinAbi = [
     inputs: [],
     name: 'repositoryUrl',
     outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'prNumber', internalType: 'uint256', type: 'uint256' },
+      { name: 'merged', internalType: 'bool', type: 'bool' },
+    ],
+    name: 'resolveMarket',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    name: 'resolvedPRs',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
   },
   {

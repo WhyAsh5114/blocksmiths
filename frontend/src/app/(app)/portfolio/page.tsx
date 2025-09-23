@@ -6,8 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Coins, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExternalLink, Coins, TrendingUp, TrendingDown, AlertCircle, BarChart3, Users } from 'lucide-react';
 import { useUserPortfolio } from '@/hooks/useUserPortfolio';
+import { PortfolioAnalytics } from '@/components/portfolio/portfolio-analytics';
+import { Leaderboard } from '@/components/portfolio/leaderboard';
 
 export default function PortfolioPage() {
   const { isConnected, address } = useAccount();
@@ -119,7 +122,7 @@ export default function PortfolioPage() {
         </p>
       </div>
 
-      {/* Portfolio Summary */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-3">
@@ -158,59 +161,87 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      {/* PR Status Refresh */}
-      {portfolio.length > 0 && (
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Your Holdings</h2>
-          <Button 
-            variant="outline" 
-            onClick={refreshPRStatuses}
-            disabled={isCheckingPRStatus}
-            className="flex items-center gap-2"
-          >
-            {isCheckingPRStatus ? (
-              <>
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Checking PR Status...
-              </>
-            ) : (
-              'Refresh PR Status'
-            )}
-          </Button>
-        </div>
-      )}
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="holdings" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="holdings" className="flex items-center gap-2">
+            <Coins className="w-4 h-4" />
+            Holdings
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="leaderboard" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Leaderboard
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Holdings */}
-      <div className="space-y-4">        
-        {portfolio.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="space-y-4">
-                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                  <Coins className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">No Investments Yet</h3>
-                  <p className="text-muted-foreground">
-                    Start trading on prediction markets to build your portfolio
-                  </p>
-                </div>
+        <TabsContent value="holdings" className="space-y-6">
+          {/* PR Status Refresh */}
+          {portfolio.length > 0 && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Your Holdings</h2>
+              <Button 
+                variant="outline" 
+                onClick={refreshPRStatuses}
+                disabled={isCheckingPRStatus}
+                className="flex items-center gap-2"
+              >
+                {isCheckingPRStatus ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Checking PR Status...
+                  </>
+                ) : (
+                  'Refresh PR Status'
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Holdings */}
+          <div className="space-y-4">        
+            {portfolio.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                      <Coins className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">No Investments Yet</h3>
+                      <p className="text-muted-foreground">
+                        Start trading on prediction markets to build your portfolio
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {portfolio.map((holding) => (
+                  <PortfolioCard 
+                    key={`${holding.tokenAddress}-${holding.repository}`}
+                    holding={holding}
+                    onRedeem={redeemTokens}
+                    isTransacting={isTransacting}
+                  />
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {portfolio.map((holding) => (
-              <PortfolioCard 
-                key={`${holding.tokenAddress}-${holding.repository}`}
-                holding={holding}
-                onRedeem={redeemTokens}
-                isTransacting={isTransacting}
-              />
-            ))}
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <PortfolioAnalytics />
+        </TabsContent>
+
+        <TabsContent value="leaderboard">
+          <Leaderboard />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

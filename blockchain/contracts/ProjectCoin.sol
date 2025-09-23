@@ -27,9 +27,23 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     // Fee distribution
     address public treasury;
     address public rewardPool;
+    address public projectCreator; // The original creator of this project token
     uint256 public constant TREASURY_FEE = 30; // 30% to treasury
-    uint256 public constant REWARD_POOL_FEE = 50; // 50% to reward pool
+    uint256 public constant REWARD_POOL_FEE = 40; // 40% to reward pool (reduced from 50%)
+    uint256 public constant CREATOR_FEE = 10; // 10% to project creator
     uint256 public constant BUYBACK_FEE = 20; // 20% for buyback/burn
+    
+    // Market Resolution System
+    struct MarketOutcome {
+        uint256 prNumber;
+        bool isResolved;
+        bool prMerged;
+        uint256 resolvedAt;
+        uint256 rewardMultiplier; // Basis points (10000 = 100%)
+    }
+    
+    mapping(uint256 => MarketOutcome) public marketOutcomes;
+    uint256[] public resolvedPRs;
     
     // State tracking
     uint256 public totalMinted;
@@ -42,6 +56,8 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     event TokensRedeemed(address indexed user, uint256 tokenAmount, uint256 ethReceived, uint256 burnFee);
     event PriceUpdated(uint256 newPrice);
     event FeesDistributed(uint256 treasury, uint256 rewardPool, uint256 buyback);
+    event CreatorRewardDistributed(address indexed creator, uint256 amount);
+    event MarketResolved(uint256 indexed prNumber, bool merged, uint256 rewardMultiplier);
     
     modifier validGithubRepo(string memory _owner, string memory _repo) {
         require(bytes(_owner).length > 0, "GitHub owner cannot be empty");
@@ -56,6 +72,7 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         string memory _githubRepo,
         address _treasury,
         address _rewardPool,
+        address _projectCreator,
         address _initialOwner
     ) 
         ERC20(_name, _symbol) 
@@ -64,6 +81,7 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     {
         require(_treasury != address(0), "Treasury address cannot be zero");
         require(_rewardPool != address(0), "Reward pool address cannot be zero");
+        require(_projectCreator != address(0), "Project creator address cannot be zero");
         
         githubOwner = _githubOwner;
         githubRepo = _githubRepo;
@@ -71,6 +89,7 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         
         treasury = _treasury;
         rewardPool = _rewardPool;
+        projectCreator = _projectCreator;
         
         // Mint initial supply to the contract owner
         _mint(_initialOwner, INITIAL_SUPPLY);
@@ -214,17 +233,20 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Distribute fees to treasury, reward pool, and keep some for buyback
+     * @dev Distribute fees to treasury, reward pool, creator, and keep some for buyback
      */
     function _distributeFees(uint256 _totalFees) internal {
         uint256 treasuryAmount = (_totalFees * TREASURY_FEE) / 100;
         uint256 rewardPoolAmount = (_totalFees * REWARD_POOL_FEE) / 100;
-        uint256 buybackAmount = _totalFees - treasuryAmount - rewardPoolAmount;
+        uint256 creatorAmount = (_totalFees * CREATOR_FEE) / 100;
+        uint256 buybackAmount = _totalFees - treasuryAmount - rewardPoolAmount - creatorAmount;
         
         _transferToTreasury(treasuryAmount);
         _transferToRewardPool(rewardPoolAmount);
+        _transferToCreator(creatorAmount);
         
         emit FeesDistributed(treasuryAmount, rewardPoolAmount, buybackAmount);
+        emit CreatorRewardDistributed(projectCreator, creatorAmount);
     }
     
     /**
@@ -242,6 +264,15 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
     function _transferToRewardPool(uint256 amount) internal {
         if (amount > 0) {
             payable(rewardPool).transfer(amount);
+        }
+    }
+    
+    /**
+     * @dev Internal function to transfer rewards to project creator
+     */
+    function _transferToCreator(uint256 amount) internal {
+        if (amount > 0) {
+            payable(projectCreator).transfer(amount);
         }
     }
     
@@ -294,5 +325,63 @@ contract ProjectCoin is ERC20, Ownable, ReentrancyGuard {
         uint256 balance = address(this).balance;
         require(balance > 0, "No ETH to withdraw");
         payable(owner()).transfer(balance);
+    }
+    
+    // ========================================
+    // MARKET RESOLUTION SYSTEM
+    // ========================================
+    
+    /**
+     * @dev Resolve a PR outcome and set reward multiplier
+     * @param prNumber The GitHub PR number
+     * @param merged Whether the PR was merged (true) or closed/rejected (false)
+     */
+    function resolveMarket(uint256 prNumber, bool merged) external onlyOwner {
+        require(!marketOutcomes[prNumber].isResolved, "Market already resolved");
+        
+        // Calculate reward multiplier based on outcome
+        uint256 rewardMultiplier;
+        if (merged) {
+            rewardMultiplier = 12000; // 120% for merged PRs (20% bonus)
+        } else {
+            rewardMultiplier = 8000;  // 80% for closed PRs (20% penalty)
+        }
+        
+        marketOutcomes[prNumber] = MarketOutcome({
+            prNumber: prNumber,
+            isResolved: true,
+            prMerged: merged,
+            resolvedAt: block.timestamp,
+            rewardMultiplier: rewardMultiplier
+        });
+        
+        resolvedPRs.push(prNumber);
+        
+        emit MarketResolved(prNumber, merged, rewardMultiplier);
+    }
+    
+    /**
+     * @dev Get market outcome for a specific PR
+     */
+    function getMarketOutcome(uint256 prNumber) external view returns (
+        bool isResolved,
+        bool prMerged,
+        uint256 resolvedAt,
+        uint256 rewardMultiplier
+    ) {
+        MarketOutcome memory outcome = marketOutcomes[prNumber];
+        return (
+            outcome.isResolved,
+            outcome.prMerged,
+            outcome.resolvedAt,
+            outcome.rewardMultiplier
+        );
+    }
+    
+    /**
+     * @dev Get all resolved PRs
+     */
+    function getResolvedPRs() external view returns (uint256[] memory) {
+        return resolvedPRs;
     }
 }

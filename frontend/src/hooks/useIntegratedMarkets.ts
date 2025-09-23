@@ -61,11 +61,9 @@ export function useIntegratedMarkets() {
     try {
       // Step 1: Get all registered tokens from factory
       const projectCoins = projectCoinFactory.allProjects || [];
-      console.log('🏭 Factory projects found:', projectCoins.length, projectCoins);
       
       if (projectCoins.length === 0) {
         // No registered tokens yet - return empty array, don't auto-load discovery
-        console.log('🔍 No registered tokens found, discovery mode available via search');
         setMarkets([]);
         return [];
       }
@@ -228,12 +226,8 @@ export function useIntegratedMarkets() {
 
   // Initialize on mount
   useEffect(() => {
-    console.log('🚀 useIntegratedMarkets useEffect triggered');
-    console.log('📋 Factory loading state:', projectCoinFactory.isLoadingProjects);
-    console.log('🏭 Factory projects:', projectCoinFactory.allProjects);
-    console.log('❌ Factory error:', projectCoinFactory.contractError);
-    
-    if (!projectCoinFactory.isLoadingProjects && !projectCoinFactory.contractError) {
+    // Load factory data and build markets
+    if (!projectCoinFactory.isLoadingProjects && projectCoinFactory.allProjects) {
       fetchIntegratedMarkets();
     }
   }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects?.length]);

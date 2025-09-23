@@ -51,37 +51,12 @@ export function useUserPortfolio() {
     setError(null);
 
     try {
-      // Create mock portfolio with more realistic data
-      const mockHoldings: PortfolioHolding[] = [];
-      
-      // Get first few projects from factory
-      const availableProjects = projectCoinFactory.allProjects.slice(0, 3);
-      
-      for (let i = 0; i < availableProjects.length; i++) {
-        const project = availableProjects[i];
-        const mockBalance = 1000 + (i * 500); // Mock different balances
-        const avgPrice = 0.001; // Average price per token
-        
-        // Mock PR number (in real app, this would come from project metadata)
-        const mockPRNumber = 100 + i;
-        
-        mockHoldings.push({
-          tokenAddress: project.tokenAddress,
-          repository: `${project.githubOwner}/${project.githubRepo}`,
-          name: project.name,
-          symbol: project.symbol,
-          balance: mockBalance,
-          totalInvested: mockBalance * avgPrice,
-          estimatedValue: mockBalance * avgPrice,
-          prNumber: mockPRNumber,
-          prStatus: 'open' // Will be updated by PR status check
-        });
-      }
-
-      setPortfolio(mockHoldings);
-      
-      // Asynchronously check PR statuses and update redemption info
-      checkPRStatusesAndUpdateRedemption(mockHoldings);
+      // TODO: Implement real portfolio data from blockchain
+      // For now, return empty portfolio until we implement:
+      // 1. Read user's token balances from contract events
+      // 2. Calculate investment amounts from purchase history
+      // 3. Get current token values and PR statuses
+      setPortfolio([]);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load portfolio');
