@@ -1,0 +1,3 @@
+
+{"chainId":1337,"type":"DEPLOYMENT_INITIALIZE"}
+{"artifactId":"ProjectCoinFactoryModule#ProjectCoinFactory","constructorArgs":["0x742d35Cc6635C0532925a3b8D2C8c82d5FF1e8F7","0x8ba1f109551bD432803012645Hac136c82433e","0x742d35Cc6635C0532925a3b8D2C8c82d5FF1e8F7"],"contractName":"ProjectCoinFactory","dependencies":[],"from":"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266","futureId":"ProjectCoinFactoryModule#ProjectCoinFactory","futureType":"NAMED_ARTIFACT_CONTRACT_DEPLOYMENT","libraries":{},"strategy":"basic","strategyConfig":{},"type":"DEPLOYMENT_EXECUTION_STATE_INITIALIZE","value":{"_kind":"bigint","value":"0"}}

@@ -161,7 +161,8 @@ contract ProjectCoinFactory is Ownable, ReentrancyGuard {
             _githubRepo,
             _treasury != address(0) ? _treasury : defaultTreasury,
             _rewardPool != address(0) ? _rewardPool : defaultRewardPool,
-            msg.sender
+            msg.sender, // Project creator gets the reward share
+            msg.sender  // Initial owner (can be different from creator if needed)
         );
     }
     

@@ -1,9 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { GitBranch, Users, Clock, Coins, ExternalLink, Wallet } from "lucide-react";
+import { GitBranch, Clock, Coins, ExternalLink, Wallet } from "lucide-react";
 import { IntegratedMarket } from "@/hooks/useIntegratedMarkets";
 import { useProjectCoinContract } from "@/hooks/web3/useProjectCoin";
 import { useState, useEffect } from "react";
@@ -88,32 +87,27 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
   };
 
   return (
-    <Card className="game-card hover:scale-[1.02] transition-all duration-300">
+    <Card className="hover:shadow-md transition-shadow duration-200">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-primary/20 text-primary">
-                {(market.tags && market.tags[0]) || 'PR'}
-              </Badge>
+              {market.tags && market.tags[0] && (
+                <Badge variant="secondary" className="text-xs">
+                  {market.tags[0]}
+                </Badge>
+              )}
               {market.status === 'review' && (
-                <Badge className="bg-accent/20 text-accent">
-                  👀 In Review
+                <Badge variant="outline" className="text-xs">
+                  In Review
                 </Badge>
               )}
               {market.hasToken && (
-                <Badge className="bg-green-500/20 text-green-400 border-green-400">
+                <Badge className="bg-green-500/20 text-green-400 border-green-400/50 text-xs">
                   <Coins className="w-3 h-3 mr-1" />
-                  Token Live
+                  Token Available
                 </Badge>
               )}
-              <Badge variant="outline" className={`
-                ${market.change > 30 ? 'text-green-400 border-green-400' : 
-                  market.change > 15 ? 'text-yellow-400 border-yellow-400' : 
-                  'text-blue-400 border-blue-400'}
-              `}>
-                +{market.change}% 📊
-              </Badge>
             </div>
             
             <CardTitle className="text-xl">
@@ -127,25 +121,12 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <GitBranch className="w-4 h-4" />
-                by {market.author}
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {market.participants}
+                {market.author}
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
-                {market.timeLeft}
+                Updated recently
               </div>
-            </div>
-          </div>
-          
-          <div className="text-right">
-            <div className="text-2xl font-bold text-primary">
-              {market.probability}%
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Merge Chance
             </div>
           </div>
         </div>
@@ -153,18 +134,6 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
 
       <CardContent>
         <div className="space-y-4">
-          {/* Market Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Volume (24h)</div>
-              <div className="font-semibold">{formatCurrency(market.volume)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Price</div>
-              <div className="font-semibold">{formatCurrency(market.price)}</div>
-            </div>
-          </div>
-
           {/* Token Information */}
           {market.hasToken && market.tokenAddress && (
             <div className="space-y-3 border-t pt-4">
@@ -173,22 +142,19 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                 <span className="font-medium">Token Details</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 gap-4 text-sm">
                 <div>
                   <div className="text-muted-foreground">Total Supply</div>
-                  <div className="font-semibold">{projectCoin.totalSupply}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Market Cap</div>
-                  <div className="font-semibold">
-                    {market.marketCap ? formatCurrency(market.marketCap) : 'N/A'}
-                  </div>
+                  <div className="font-semibold">{projectCoin.totalSupply || 'Loading...'}</div>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground">
                   Mint Cost: {mintCostFormatted} ETH (for {mintAmount} tokens)
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  💡 Price increases every 1000 tokens minted. Current batch price: {projectCoin.currentMintPrice || '0.001'} ETH per 1000 tokens.
                 </div>
                 <div className="flex gap-2">
                   <Input
@@ -200,6 +166,14 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                     min="0.01"
                     step="0.01"
                   />
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMintAmount('1000')}
+                    className="px-3 text-xs"
+                  >
+                    1K
+                  </Button>
                   <Button 
                     onClick={handleMint}
                     disabled={!isConnected || projectCoin.isPending || !mintAmount || parseFloat(mintAmount) <= 0}
@@ -213,21 +187,14 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
                     {mintError}
                   </div>
                 )}
+                {showSuccess && (
+                  <div className="text-sm text-green-400">
+                    Tokens minted successfully!
+                  </div>
+                )}
               </div>
             </div>
           )}
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Merge Probability</span>
-              <span>{market.probability}%</span>
-            </div>
-            <Progress 
-              value={market.probability} 
-              className="h-2 bg-background/50" 
-            />
-          </div>
 
           {/* Action Buttons */}
           <div className="flex gap-2">
@@ -276,7 +243,7 @@ export function IntegratedMarketCard({ market, onCreateToken }: IntegratedMarket
           )}
           {showSuccess && (
             <div className="text-center text-sm text-green-400">
-              🎉 Tokens minted successfully! Total supply updated.
+              Tokens minted successfully! Total supply updated.
             </div>
           )}
           {projectCoin.writeError && (

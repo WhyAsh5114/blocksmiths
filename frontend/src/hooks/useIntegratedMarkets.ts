@@ -61,20 +61,14 @@ export function useIntegratedMarkets() {
     try {
       // Step 1: Get all registered tokens from factory
       const projectCoins = projectCoinFactory.allProjects || [];
-      console.log('🏭 Factory projects found:', projectCoins.length, projectCoins);
       
       if (projectCoins.length === 0) {
-        // No registered tokens yet - use discovery mode with popular repos
-        console.log('🔍 No registered tokens found, using discovery mode');
-        const discoveryMarkets = await githubMarkets.loadTrendingMarkets();
-        console.log('📊 Discovery markets found:', discoveryMarkets.length, discoveryMarkets);
-        const integratedDiscoveryMarkets: IntegratedMarket[] = discoveryMarkets.map((market: Market) => ({
-          ...market,
-          hasToken: false,
-        }));
-        setMarkets(integratedDiscoveryMarkets);
-        return integratedDiscoveryMarkets;
-      }      // Fetch GitHub data for each registered token
+        // No registered tokens yet - return empty array, don't auto-load discovery
+        setMarkets([]);
+        return [];
+      }
+
+      // Fetch GitHub data for each registered token
       const marketArrays = await Promise.all(
         projectCoins.map(async (project: ProjectInfo) => {
           const repoName = `${project.githubOwner}/${project.githubRepo}`;
@@ -101,8 +95,8 @@ export function useIntegratedMarkets() {
                 prNumber: 0,
                 title: `${project.name} - No active PRs`,
                 author: project.creator,
-                probability: 50,
-                price: 0.001,
+                probability: 0,
+                price: 0,
                 change: 0,
                 volume: 0,
                 status: 'open' as const,
@@ -111,9 +105,9 @@ export function useIntegratedMarkets() {
                 participants: 0,
                 hasToken: true,
                 tokenAddress: project.tokenAddress,
-                totalSupply: '1000000',
-                mintCost: '0.001',
-                marketCap: 1000,
+                totalSupply: '0',
+                mintCost: '0',
+                marketCap: 0,
               } as IntegratedMarket];
             }
           } catch (error) {
@@ -125,8 +119,8 @@ export function useIntegratedMarkets() {
               prNumber: 0,
               title: `${project.name} - GitHub data unavailable`,
               author: project.creator,
-              probability: 50,
-              price: 0.001,
+              probability: 0,
+              price: 0,
               change: 0,
               volume: 0,
               status: 'open' as const,
@@ -135,9 +129,9 @@ export function useIntegratedMarkets() {
               participants: 0,
               hasToken: true,
               tokenAddress: project.tokenAddress,
-              totalSupply: '1000000',
-              mintCost: '0.001',
-              marketCap: 1000,
+              totalSupply: '0',
+              mintCost: '0',
+              marketCap: 0,
             } as IntegratedMarket];
           }
         })
@@ -182,10 +176,11 @@ export function useIntegratedMarkets() {
           
           if (hasToken && tokenInfo) {
             try {
-              // Fetch real contract data if token exists
-              totalSupply = '1000000'; // Placeholder
-              mintCost = '0.001'; // Placeholder
-              marketCap = parseFloat(totalSupply) * market.price;
+              // Use real contract data when available
+              // These will be filled by the ProjectCoin contract hook
+              totalSupply = '0'; // Will be loaded from contract
+              mintCost = '0'; // Will be loaded from contract
+              marketCap = 0; // Not calculated without real trading data
             } catch (contractError) {
               console.warn(`Failed to fetch contract data for ${market.repo}:`, contractError);
             }
@@ -231,15 +226,11 @@ export function useIntegratedMarkets() {
 
   // Initialize on mount
   useEffect(() => {
-    console.log('🚀 useIntegratedMarkets useEffect triggered');
-    console.log('📋 Factory loading state:', projectCoinFactory.isLoadingProjects);
-    console.log('🏭 Factory projects:', projectCoinFactory.allProjects);
-    console.log('❌ Factory error:', projectCoinFactory.contractError);
-    
-    if (!projectCoinFactory.isLoadingProjects) {
+    // Load factory data and build markets
+    if (!projectCoinFactory.isLoadingProjects && projectCoinFactory.allProjects) {
       fetchIntegratedMarkets();
     }
-  }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects]);
+  }, [projectCoinFactory.isLoadingProjects, projectCoinFactory.allProjects?.length]);
 
   // Get only markets that have actual tokens (for a cleaner "real markets" view)
   const getTokenMarkets = (): IntegratedMarket[] => {
