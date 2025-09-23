@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, Target, Clock, Award } from 'lucide-react';
 import { useUserPortfolio, PortfolioHolding } from '@/hooks/useUserPortfolio';
+import { useProjectCoinFactory } from '@/hooks/web3/useProjectCoin';
 
 interface PortfolioAnalytics {
   totalValue: number;
@@ -17,6 +18,7 @@ interface PortfolioAnalytics {
 
 export function PortfolioAnalytics() {
   const { portfolio, isLoading } = useUserPortfolio();
+  const { allProjects } = useProjectCoinFactory();
   const [analytics, setAnalytics] = useState<PortfolioAnalytics | null>(null);
 
   useEffect(() => {
